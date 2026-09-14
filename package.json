@@ -2,7 +2,7 @@
   "name": "vscode-deepseek-balance",
   "displayName": "DeepSeek 余额",
   "description": "在状态栏实时显示 DeepSeek 账户余额，支持多币种、低余额提醒与自动刷新。",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "luhaifeng666",
   "license": "MIT",
   "author": {
