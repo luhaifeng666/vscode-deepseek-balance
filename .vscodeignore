@@ -7,6 +7,11 @@ node_modules/**
 **/*.ts
 !**/*.d.ts
 scripts/**
+# 内部文档与 CI 配置：发布物里没有它们的位置。
+# 是 scripts/smoke 里那条「打包内容符合 .vscodeignore 的意图」抓出来的 —— 在它之前
+# 这两个一直跟着 vsix 发出去（40KB 的 runbook + release.yml）。
+docs/**
+.github/**
 tsconfig.json
 esbuild.mjs
 pnpm-lock.yaml

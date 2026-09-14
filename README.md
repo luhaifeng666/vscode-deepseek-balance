@@ -114,9 +114,13 @@ VS Code 的 `http.proxy` 设置**不会**作用于本扩展的请求——扩展
 pnpm install
 pnpm run check      # 类型检查
 pnpm test           # 单元测试 + 真实 HTTP 集成测试
+pnpm run smoke      # 冒烟测试：加载 dist/ 跑一遍 activate()
+pnpm run smoke:vsix # 同上，但加载打包好的 .vsix（需先 package）
 pnpm run watch      # 开发时增量构建，然后在 VS Code 里按 F5
 pnpm run package    # 打包成 .vsix
 ```
+
+`pnpm test` 测的是源码逻辑；`pnpm run smoke` 测的是**装进 VS Code 之后会怎样** —— 它在纯 Node 下用手写的 `vscode` 桩加载真正的产物，跑一遍 `activate()`，让扩展对着本地 mock 接口完成「激活 → 拉取 → 渲染 → 执行命令 → 释放」。`smoke:vsix` 更进一步，从 `.vsix` 里解出 `extension/` 再加载，因此还顺带核对打包内容（`.vscodeignore` 有没有漏排开发文件、`main` 指向的文件在不在包里）—— 这类问题单元测试看不见。CI 上发布前跑的就是它。
 
 调试那些对着真实接口无法按需复现的分支（余额不可用、空余额、非 JSON、401/403、超时……）时，用本地假接口：
 

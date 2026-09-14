@@ -127,6 +127,8 @@
     "watch": "node esbuild.mjs --watch",
     "bundle": "node esbuild.mjs --minify",
     "test": "node esbuild.mjs --tests && node --test \"out-test/**/*.test.js\"",
+    "smoke": "node --test scripts/smoke/extension.test.mjs",
+    "smoke:vsix": "SMOKE_TARGET=vsix node --test scripts/smoke/extension.test.mjs",
     "vscode:prepublish": "npm run bundle",
     "package": "vsce package",
     "publish": "vsce publish"

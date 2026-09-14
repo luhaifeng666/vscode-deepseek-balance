@@ -117,6 +117,12 @@ jobs:
       - name: 打包
         run: pnpm run package
 
+      # 必须排在打包之后：它测的是打包好的 vsix 本身 —— 解出 extension/ 加载
+      # main 指向的那个文件、跑一遍 activate()、并核对包内不含 src/ 之类的
+      # 开发文件。单元测试和 dist 都看不见 .vscodeignore 配错，只有这一步能。
+      - name: 冒烟测试（加载 vsix 跑一遍 activate）
+        run: pnpm run smoke:vsix
+
       - name: 登录 Azure（OIDC，无需密钥）
         uses: azure/login@v2
         with:
