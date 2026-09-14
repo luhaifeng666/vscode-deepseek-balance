@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_fb6c66e037fb19::t_b0f1067b304748 5-12
+package.json
+  s_fb6c66e037fb19::t_6304b07e601c11 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "73fe63123d5e8bf1b1f7ff83d6ccd404da10b4de",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "unknown"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
