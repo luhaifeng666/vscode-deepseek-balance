@@ -1,0 +1,134 @@
+# DeepSeek 余额
+
+Show your DeepSeek account balance in the VS Code status bar — auto-refreshing, multi-currency, with a low-balance warning.
+
+在 VS Code 状态栏实时显示 DeepSeek 账户余额。
+
+## 功能
+
+- **状态栏常驻**：扫一眼就能看到余额，不用切窗口
+- **自动刷新**：启动时查一次，之后按可配置间隔轮询，也可随时手动刷新
+- **多币种**：接口返回多种币种时全部列出，状态栏只显示你选中的那个
+- **低余额提醒**：低于阈值时状态栏转为警告色
+- **密钥安全**：API Key 存在系统钥匙串里，不写入 `settings.json`，也不会被 Settings Sync 同步到云端
+
+## 效果
+
+状态栏：
+
+```
+💳 CNY 34.53
+```
+
+悬停提示：
+
+```
+DeepSeek 账户余额
+
+CNY 34.53（赠送 0.00 / 充值 34.53）
+
+✓ 账户状态：可用
+🕘 上次更新：2026-09-14 15:32:10
+🖥 接口地址：https://api.deepseek.com/user/balance
+
+立即刷新 · 查看详情 · 设置
+```
+
+各种状态会如实反映在状态栏上：
+
+| 情况 | 状态栏 |
+| --- | --- |
+| 尚未配置 Key | `🔑 DeepSeek` |
+| 正常 | `💳 CNY 34.53` |
+| 余额低于阈值 | `⚠ CNY 3.20`（黄色背景） |
+| 数据过期 | `⚠ CNY 34.53`（黄色文字） |
+| API Key 无效 | `⛔ DeepSeek 密钥无效`（红色背景） |
+| 连接失败 | `⚠ DeepSeek 连接失败` |
+| 余额不可用于 API 调用 | `🚫 CNY 34.53`（黄色背景） |
+
+## 安装
+
+从 VSIX 安装：
+
+```sh
+code --install-extension vscode-deepseek-balance-0.1.0.vsix
+```
+
+## 使用
+
+1. `Cmd/Ctrl+Shift+P` 打开命令面板
+2. 运行 **DeepSeek: 设置 API Key**
+3. 粘贴你的 DeepSeek API Key（可从 <https://platform.deepseek.com/api_keys> 获取）
+
+状态栏随即出现余额。点击状态栏可以查看详情、立即刷新或前往充值。
+
+## 设置
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `deepseekBalance.refreshInterval` | `5` | 自动刷新间隔（分钟）。`0` 关闭自动刷新，只保留手动 |
+| `deepseekBalance.baseUrl` | `https://api.deepseek.com` | 接口基础地址，走代理或自建网关时改这里 |
+| `deepseekBalance.currency` | `AUTO` | 状态栏优先显示的币种：`AUTO` / `CNY` / `USD` |
+| `deepseekBalance.lowBalanceThreshold` | `10` | 低于该值时告警，`0` 关闭 |
+| `deepseekBalance.statusBarAlignment` | `right` | 显示在状态栏左侧还是右侧 |
+
+### 命令
+
+| 命令 | 说明 |
+| --- | --- |
+| `DeepSeek: 刷新余额` | 立即查询一次 |
+| `DeepSeek: 查看余额详情` | 列出各币种明细，并提供刷新 / 重设 Key / 充值入口 |
+| `DeepSeek: 设置 API Key` | 设置或替换 API Key |
+| `DeepSeek: 清除 API Key` | 从钥匙串中删除已保存的 Key |
+| `DeepSeek: 打开余额设置` | 直接跳转到本扩展的设置页 |
+
+## 常见问题
+
+**走代理没生效？**
+
+VS Code 的 `http.proxy` 设置**不会**作用于本扩展的请求——扩展宿主用的是 Node 的原生 `fetch`，它不读 VS Code 的代理配置。请改 `deepseekBalance.baseUrl`，指向你的代理或网关地址。当前生效的地址可以在悬停提示的最后一行看到。
+
+**提示「API Key 无效」？**
+
+多半是粘贴时带上了换行或空格，或者 Key 已被撤销。重新运行一次「设置 API Key」即可，本扩展在保存前会自动去掉首尾空白。
+
+**状态栏显示黄色但数字是旧的？**
+
+说明最近一次刷新失败了（网络问题或接口异常），此时会保留最后一次成功的值并在提示里标注「数据可能已过期」，而不是把数字清空。
+
+**低余额阈值是怎么比较的？**
+
+阈值以**状态栏当前显示的币种**为准、不做汇率换算。账户同时有人民币和美元时，请按你实际显示的那个币种来设阈值。
+
+## 隐私
+
+- **无遥测、无数据上报、无分析埋点**
+- API Key 只保存在 VS Code 的 `SecretStorage`（macOS 上即系统钥匙串），不会写入 `settings.json`
+- 由于不在设置里，Key **不会**被 Settings Sync 同步——换机器需要重新设置一次
+- 除你配置的 `baseUrl` 之外，本扩展不向任何地址发起请求
+- Key 不会被写进日志、错误提示或悬停信息
+
+## 开发
+
+```sh
+pnpm install
+pnpm run check      # 类型检查
+pnpm test           # 单元测试 + 真实 HTTP 集成测试
+pnpm run watch      # 开发时增量构建，然后在 VS Code 里按 F5
+pnpm run package    # 打包成 .vsix
+```
+
+调试那些对着真实接口无法按需复现的分支（余额不可用、空余额、非 JSON、401/403、超时……）时，用本地假接口：
+
+```sh
+node scripts/mock-balance.mjs              # 启动在 127.0.0.1:8787
+curl http://127.0.0.1:8787/mode/low        # 切换模式
+```
+
+再把 `deepseekBalance.baseUrl` 指到 `http://127.0.0.1:8787` 即可。可用模式见脚本开头的 `MODES`。
+
+图标可用 `node scripts/make-icon.mjs` 重新生成。
+
+## License
+
+[MIT](LICENSE)

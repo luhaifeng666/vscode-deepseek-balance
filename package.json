@@ -1,0 +1,148 @@
+{
+  "name": "vscode-deepseek-balance",
+  "displayName": "DeepSeek 余额",
+  "description": "在状态栏实时显示 DeepSeek 账户余额，支持多币种、低余额提醒与自动刷新。",
+  "version": "0.1.0",
+  "publisher": "luhaifeng666",
+  "license": "MIT",
+  "author": {
+    "name": "luhaifeng666"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "deepseek",
+    "balance",
+    "余额",
+    "status bar",
+    "状态栏",
+    "api",
+    "credit"
+  ],
+  "icon": "images/icon.png",
+  "main": "./dist/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luhaifeng666/vscode-deepseek-balance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/luhaifeng666/vscode-deepseek-balance/issues"
+  },
+  "homepage": "https://github.com/luhaifeng666/vscode-deepseek-balance#readme",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "deepseekBalance.refresh",
+        "title": "刷新余额",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.showDetails",
+        "title": "查看余额详情",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.setApiKey",
+        "title": "设置 API Key",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.clearApiKey",
+        "title": "清除 API Key",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.openSettings",
+        "title": "打开余额设置",
+        "category": "DeepSeek"
+      }
+    ],
+    "configuration": {
+      "title": "DeepSeek 余额",
+      "properties": {
+        "deepseekBalance.refreshInterval": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "maximum": 1440,
+          "scope": "window",
+          "markdownDescription": "自动刷新余额的间隔（分钟）。设为 `0` 可关闭自动刷新，只保留手动刷新。"
+        },
+        "deepseekBalance.baseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com",
+          "scope": "window",
+          "markdownDescription": "DeepSeek API 基础地址。默认 `https://api.deepseek.com`；如需走代理或自建网关，可改为对应地址（须以 `http://` 或 `https://` 开头）。\n\n注意：VS Code 的 `http.proxy` 设置不会作用于本扩展的请求，走代理请改这里。"
+        },
+        "deepseekBalance.currency": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "CNY",
+            "USD"
+          ],
+          "enumDescriptions": [
+            "自动：优先显示人民币，没有则显示接口返回的第一个币种",
+            "始终优先显示人民币（CNY）",
+            "始终优先显示美元（USD）"
+          ],
+          "default": "AUTO",
+          "scope": "window",
+          "markdownDescription": "状态栏上优先展示的币种。悬停提示中始终列出全部币种。"
+        },
+        "deepseekBalance.lowBalanceThreshold": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "scope": "window",
+          "markdownDescription": "低余额提醒阈值。余额**低于**该值时，状态栏将以警告色显示。设为 `0` 可关闭提醒。\n\n阈值以**状态栏当前显示的币种**为准、不做汇率换算，因此账户有两种币种时请按显示币种来设。"
+        },
+        "deepseekBalance.statusBarAlignment": {
+          "type": "string",
+          "enum": [
+            "right",
+            "left"
+          ],
+          "enumDescriptions": [
+            "状态栏右侧（默认）",
+            "状态栏左侧"
+          ],
+          "default": "right",
+          "scope": "window",
+          "markdownDescription": "状态栏余额显示的位置。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "bundle": "node esbuild.mjs --minify",
+    "test": "node esbuild.mjs --tests && node --test \"out-test/**/*.test.js\"",
+    "vscode:prepublish": "npm run bundle",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "1.95.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@vscode/vsce-sign",
+      "esbuild",
+      "keytar"
+    ]
+  }
+}
