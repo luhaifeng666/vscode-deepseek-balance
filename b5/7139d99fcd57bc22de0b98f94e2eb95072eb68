@@ -1,0 +1,79 @@
+src/secrets.ts
+  s_fb6c66e037fb19::t_e22b5217b4c4c5 1-67
+src/statusBar.ts
+  s_fb6c66e037fb19::t_4ee8b4259ce8c9 1-68
+src/logging.ts
+  s_fb6c66e037fb19::t_61ecacc3e9b089 1-11
+package.json
+  s_fb6c66e037fb19::t_1546c619ad12ff 140-146
+  s_fb6c66e037fb19::t_f0f768b05c4a66 1-104,106-128,130-139,147-148
+  s_fb6c66e037fb19::t_4aed346ccd8ca9 129
+  s_fb6c66e037fb19::t_a41a2011d757b1 105
+src/deepseek/balance.ts
+  s_fb6c66e037fb19::t_bb959b870dfb4e 1-54
+src/test/client.test.ts
+  s_fb6c66e037fb19::t_a88ffbb866e419 1-285
+src/render.ts
+  s_fb6c66e037fb19::t_7a61fedf961aef 1-269
+src/test/balance.test.ts
+  s_fb6c66e037fb19::t_39428229dee5b9 1-95
+tsconfig.json
+  s_fb6c66e037fb19::t_56605bc7f623aa 1-20
+src/deepseek/client.ts
+  s_fb6c66e037fb19::t_004940a0296a63 1-156
+scripts/mock-balance.mjs
+  s_fb6c66e037fb19::t_a5fbffcc57ab32 1-96
+.vscodeignore
+  s_fb6c66e037fb19::t_7e7537dc90f594 1-8,10-16
+  s_fb6c66e037fb19::t_7317793ef73d4e 9
+src/extension.ts
+  s_fb6c66e037fb19::t_cb4c3fd28ff995 1-61
+esbuild.mjs
+  s_fb6c66e037fb19::t_28527c21633007 25
+  s_fb6c66e037fb19::t_43a072996ed08c 1-24,26-62
+.gitignore
+  s_fb6c66e037fb19::t_dc7364b9bdfc69 1-5
+src/config.ts
+  s_fb6c66e037fb19::t_522648b9a01026 1-74
+src/test/integration.test.ts
+  s_fb6c66e037fb19::t_22c7f908c2aa08 1-235
+LICENSE
+  s_fb6c66e037fb19::t_e46fef2ae7e330 1-21
+src/controller.ts
+  s_fb6c66e037fb19::t_73e82aa62701f6 1-261
+scripts/make-icon.mjs
+  s_fb6c66e037fb19::t_342fbb6ccf81e7 1-142
+CHANGELOG.md
+  s_fb6c66e037fb19::t_4cfd2a9ab1d90e 1-16
+.vscode/tasks.json
+  s_fb6c66e037fb19::t_64cdf447d7bd90 1-33
+.vscode/launch.json
+  s_fb6c66e037fb19::t_f3b781ba3a8a36 1-13
+src/commands.ts
+  s_fb6c66e037fb19::t_bd3bba343dae93 1-137
+README.md
+  s_fb6c66e037fb19::t_c218b9a4c99bea 1-134
+src/test/render.test.ts
+  s_fb6c66e037fb19::t_91a193f1a6c715 1-86,92-93,106-283
+  s_fb6c66e037fb19::t_d633302de61962 87-91,94-105
+src/deepseek/types.ts
+  s_fb6c66e037fb19::t_4bdadfb0efb674 1-47
+pnpm-lock.yaml
+  s_fb6c66e037fb19::t_bdd8d22470dc66 1-2605
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b57139d99fcd57bc22de0b98f94e2eb95072eb68",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
