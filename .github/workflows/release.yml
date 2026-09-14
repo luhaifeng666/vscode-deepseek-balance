@@ -1,0 +1,125 @@
+# 发布到 VS Code Marketplace。
+#
+# 认证走 Microsoft Entra ID（workload identity federation），不使用 PAT ——
+# Azure DevOps 的全局 PAT 将于 2026-12-01 停用，而 Marketplace 发布必须用
+# 「All accessible organizations」的全局 PAT，没有组织级替代品，所以 OIDC 是唯一的长久解法。
+#
+# ---------------------------------------------------------------------------
+# 一次性准备（都在 VS Code 这边做不完，需要在 Azure / Entra 里操作）
+#
+# 1. 建 Entra 应用注册（或用户分配托管身份），记下 Application (client) ID 与
+#    Directory (tenant) ID。它不需要任何 Azure 订阅。
+#
+# 2. 给它加一条 Federated credential：
+#      Issuer  : https://token.actions.githubusercontent.com
+#      Subject : repo:luhaifeng666/vscode-deepseek-balance:environment:release
+#      Audience: api://AzureADTokenExchange
+#    subject 里用 environment 而不是分支/tag —— 固定字符串，不需要通配符，
+#    且能吃到 GitHub Environment 的保护规则。
+#
+# 3. 取该身份的 resource ID（在 Azure Cloud Shell 里跑）：
+#      az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+#        --resource 499b84ac-1321-427f-aa17-267ca6975798
+#    记下返回 JSON 里的 id 字段。
+#
+# 4. Marketplace 里把该身份加为 publisher 成员：
+#    https://marketplace.visualstudio.com/manage → Publishers → Members
+#    用上一步的 resource ID 添加，角色选 Contributor。
+#
+# 5. GitHub 仓库设置：
+#    - Settings → Environments → 新建名为 release 的环境（名字必须一致）
+#    - Settings → Secrets and variables → Actions → 新建两个 secret：
+#        AZURE_CLIENT_ID    第 1 步的 client ID
+#        AZURE_TENANT_ID    第 1 步的 tenant ID
+#
+# ---------------------------------------------------------------------------
+# 发布方式：把 package.json 的 version 改好并提交，然后打 tag 推上去
+#
+#     npm version 0.2.0 --no-git-tag-version   # 或手改 package.json
+#     git commit -am "chore: 发布 0.2.0"
+#     git tag v0.2.0 && git push origin main --tags
+#
+# tag 必须与 package.json 的 version 一致，下面有一步会卡这个。
+# ---------------------------------------------------------------------------
+
+name: 发布
+
+on:
+  push:
+    tags:
+      - "v*"
+  # 允许手动重跑（比如发布失败后修好配置重试）
+  workflow_dispatch:
+
+# 同一时间只跑一个发布，避免两个 tag 撞车
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: 打包并发布
+    runs-on: ubuntu-latest
+
+    # 必须与 Federated credential 的 subject 里那段一致，
+    # 否则 GitHub 签发的 OIDC token 换不到 Entra 的 access token。
+    environment: release
+
+    permissions:
+      contents: read
+      id-token: write # azure/login 换 OIDC token 需要
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm run check
+
+      - name: 测试
+        run: pnpm test
+
+      - name: 校验 tag 与 package.json 版本一致
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "::error::tag v$TAG 与 package.json 里的 $VERSION 不一致，先同步版本号再发"
+            exit 1
+          fi
+          echo "版本 $VERSION 校验通过"
+
+      - name: 打包
+        run: pnpm run package
+
+      - name: 登录 Azure（OIDC，无需密钥）
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          # 发布扩展的身份不需要 Azure 订阅
+          allow-no-subscriptions: true
+
+      - name: 发布到 Marketplace
+        env:
+          # vsce 的凭据链会读这两个变量来定位租户；不设虽然多数时候也能过，
+          # 但设了才不会在租户不匹配时报出含糊的错。
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          # 发布上一步亲手打包并经测试的那个 vsix，而不是让 vsce 在云端重新构建一遍
+          npx vsce publish --azure-credential \
+            --packagePath "./vscode-deepseek-balance-${VERSION}.vsix"
