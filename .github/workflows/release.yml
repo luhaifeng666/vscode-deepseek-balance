@@ -10,17 +10,27 @@
 # 1. 建 Entra 应用注册（或用户分配托管身份），记下 Application (client) ID 与
 #    Directory (tenant) ID。它不需要任何 Azure 订阅。
 #
-# 2. 给它加一条 Federated credential：
+# 2. 给它加一条 Federated credential，方案选「GitHub Actions deploying Azure resources」：
 #      Issuer  : https://token.actions.githubusercontent.com
-#      Subject : repo:luhaifeng666/vscode-deepseek-balance:environment:release
+#      Subject : repo:luhaifeng666@9375823/vscode-deepseek-balance@1369352399:environment:release
 #      Audience: api://AzureADTokenExchange
-#    subject 里用 environment 而不是分支/tag —— 固定字符串，不需要通配符，
+#
+#    ⚠️ subject 里的 @9375823 / @1369352399 是 GitHub 的数字 ID，不是装饰。
+#    本仓库建于 2026-07-15 之后，GitHub 签发的 sub 用的是不可变格式
+#    （repo:OWNER@OWNER_ID/REPO@REPO_ID:...），少了这两个 ID 就换不到 token。
+#    门户里对应「组织 ID」和「存储库 ID」两个输入框，填法见 docs/release-setup.html。
+#    随时可以用这条命令复核：
+#      gh api repos/luhaifeng666/vscode-deepseek-balance/actions/oidc/customization/sub
+#
+#    末段用 environment 而不是分支/tag —— 固定字符串，不需要通配符，
 #    且能吃到 GitHub Environment 的保护规则。
 #
-# 3. 取该身份的 resource ID（在 Azure Cloud Shell 里跑）：
+# 3. 取该身份的 resource ID（先在应用注册里临时建一个 client secret 用来登录）：
+#      az login --service-principal --username <client-id> \
+#        --password <secret值> --tenant <tenant-id>
 #      az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
 #        --resource 499b84ac-1321-427f-aa17-267ca6975798
-#    记下返回 JSON 里的 id 字段。
+#    记下返回 JSON 里的 id 字段，然后立刻删掉那个 client secret。
 #
 # 4. Marketplace 里把该身份加为 publisher 成员：
 #    https://marketplace.visualstudio.com/manage → Publishers → Members
