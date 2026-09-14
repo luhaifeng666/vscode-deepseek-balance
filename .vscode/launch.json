@@ -8,6 +8,24 @@
       "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}"
+    },
+    {
+      // 走查用量那些对着真实接口无法按需复现的分支（会话过期、结构漂移、超时……）。
+      // 先在终端起 `node scripts/mock-balance.mjs`，然后用这个配置按 F5。
+      //
+      // 余额那边仍要在设置里把 deepseekBalance.baseUrl 指到 http://127.0.0.1:8787；
+      // 用量这边**不是配置项**，只能这样从环境变量注入（见 README 的「隐私」）。
+      //
+      // 另一个配置故意不带这个变量 —— 对着真实控制台做数据交叉验证时要用它。
+      "name": "运行扩展（用量指向本地 mock）",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "${defaultBuildTask}",
+      "env": {
+        "DEEPSEEK_USAGE_BASE_URL": "http://127.0.0.1:8787"
+      }
     }
   ]
 }

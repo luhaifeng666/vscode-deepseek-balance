@@ -18,12 +18,10 @@ const common = {
 if (tests) {
   await esbuild.build({
     ...common,
-    entryPoints: [
-      "src/test/balance.test.ts",
-      "src/test/client.test.ts",
-      "src/test/render.test.ts",
-      "src/test/integration.test.ts",
-    ],
+    // 用 glob 而不是逐个列文件：列文件时新增一个 *.test.ts 会被**静默漏掉** ——
+    // 它不进 out-test/，`node --test "out-test/**/*.test.js"` 自然也不跑它，
+    // 于是 `pnpm test` 全绿而新测试一次都没执行过。这比测试失败危险得多。
+    entryPoints: ["src/test/*.test.ts"],
     outdir: "out-test",
     sourcemap: false,
   });

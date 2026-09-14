@@ -2,16 +2,20 @@ import * as vscode from "vscode";
 
 import type { CurrencyPref } from "./deepseek/balance";
 import { DEFAULT_BASE_URL } from "./deepseek/client";
+import type { UsageRange } from "./deepseek/types";
+import { isUsageRange } from "./deepseek/usage";
 
 export const CONFIG_SECTION = "deepseekBalance";
 
 export interface AppConfig {
   baseUrl: string;
-  /** 分钟；0 表示关闭自动刷新。 */
+  /** 分钟；0 表示关闭自动刷新。用量轮询搭这条心跳的车，所以它也是 0 就都不轮询。 */
   refreshInterval: number;
   currency: CurrencyPref;
   lowBalanceThreshold: number;
   statusBarAlignment: "left" | "right";
+  /** 用量时间范围。改动会经由既有的配置变更链路触发重渲染。 */
+  usageRange: UsageRange;
 }
 
 export type WarningReporter = (message: string) => void;
@@ -57,12 +61,19 @@ export function readConfig(
   const statusBarAlignment =
     config.get<string>("statusBarAlignment") === "left" ? "left" : "right";
 
+  // 非法值静默回退到 today 就够，不必 warn：这个值的唯一写入方是我们自己的
+  // range 命令（注册时已用 isUsageRange 校验过），手改配置写错的情况极少，而写错
+  // 了也只是显示默认范围，没有需要用户立刻知道的事。
+  const rawUsageRange = config.get<string>("usageRange");
+  const usageRange: UsageRange = isUsageRange(rawUsageRange) ? rawUsageRange : "today";
+
   return {
     baseUrl,
     refreshInterval,
     currency,
     lowBalanceThreshold,
     statusBarAlignment,
+    usageRange,
   };
 }
 

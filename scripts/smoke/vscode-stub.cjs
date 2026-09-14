@@ -75,16 +75,67 @@ function createStatusBarItem(alignment, priority) {
   return item;
 }
 
-const configStore = {};
+/**
+ * 三层配置存储，模拟 VS Code 的真实优先级（工作区文件夹 > 工作区 > 全局）。
+ *
+ * 分开是必须的：usageRange 的范围命令写 **Global**，而 Global 会被工作区层盖住
+ * ——「点了链接没反应」正是要测的那个场景。只有一个平铺 map 就测不出来。
+ */
+const configScopes = { global: {}, workspace: {}, workspaceFolder: {} };
+
+/** 兼容旧用法：直接写这里等于写全局层。 */
+const configStore = configScopes.global;
 const configListeners = new EventEmitter();
+
+const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 
 const workspace = {
   getConfiguration(section) {
     const prefix = section ? `${section}.` : "";
+    const full = (key) => `${prefix}${key}`;
+    const layerFor = (target) =>
+      target === ConfigurationTarget.Workspace
+        ? configScopes.workspace
+        : target === ConfigurationTarget.WorkspaceFolder
+          ? configScopes.workspaceFolder
+          : configScopes.global;
+    const effective = (key) => {
+      const f = full(key);
+      for (const layer of [
+        configScopes.workspaceFolder,
+        configScopes.workspace,
+        configScopes.global,
+      ]) {
+        if (f in layer) return layer[f];
+      }
+      return undefined;
+    };
+
     return {
       get(key, fallback) {
-        const full = `${prefix}${key}`;
-        return full in configStore ? configStore[full] : fallback;
+        const value = effective(key);
+        return value !== undefined ? value : fallback;
+      },
+      // 真实 VS Code 也是「先落盘、再广播变更事件」，所以这里顺手 emit：
+      // 扩展的重渲染链路（onDidChangeConfiguration → onConfigChanged）就是靠它。
+      async update(key, value, target) {
+        const layer = layerFor(target);
+        const f = full(key);
+        if (value === undefined) delete layer[f];
+        else layer[f] = value;
+        configListeners.emit("change", {
+          affectsConfiguration: (s) => s === undefined || s === section,
+        });
+      },
+      inspect(key) {
+        const f = full(key);
+        return {
+          key: f,
+          defaultValue: undefined,
+          globalValue: configScopes.global[f],
+          workspaceValue: configScopes.workspace[f],
+          workspaceFolderValue: configScopes.workspaceFolder[f],
+        };
       },
     };
   },
@@ -180,6 +231,7 @@ module.exports = {
   ThemeColor,
   StatusBarAlignment,
   QuickPickItemKind,
+  ConfigurationTarget,
   workspace,
   window,
   commands,
@@ -187,5 +239,6 @@ module.exports = {
   env,
   __created: created,
   __configStore: configStore,
+  __configScopes: configScopes,
   __configListeners: configListeners,
 };

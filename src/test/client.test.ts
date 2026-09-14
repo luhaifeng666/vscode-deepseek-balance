@@ -6,6 +6,7 @@ import {
   classifyHttpStatus,
   fetchBalance,
   redactSecrets,
+  redactValue,
 } from "../deepseek/client";
 import type { BalanceResult } from "../deepseek/types";
 
@@ -295,4 +296,43 @@ test("redactSecrets：抹掉 sk- 形式的密钥", () => {
 
 test("redactSecrets：没有密钥时原样返回", () => {
   assert.equal(redactSecrets("plain message"), "plain message");
+});
+
+// 下面三条针对的是**用量侧**凭据的形状。它们存在的理由值得写下来：控制台
+// userToken 不是 `sk-` 形状，而「照着现有 canary 抄一份」会通过——通过的原因是
+// token 压根没走到脱敏函数。所以这些用例是直接对着 redactSecrets 打的。
+
+test("redactSecrets：抹掉 JWT 形状的串", () => {
+  const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+  const out = redactSecrets(`token=${jwt}`);
+  assert.ok(!out.includes("eyJhbGciOiJIUzI1NiJ9"), `JWT 没被抹掉：${out}`);
+  assert.equal(out, "token=<JWT>");
+});
+
+test("redactSecrets：抹掉整条 Bearer 头，且不印成 sk-***", () => {
+  // 三条规则分开替就是为了这个：混在一条里会把 Bearer 头也印成 `sk-***`，
+  // 看日志的人就分不清被抹掉的原本是哪种凭据。
+  const out = redactSecrets("Authorization: Bearer tok-abcdefghijklmnopqrst");
+  assert.equal(out, "Authorization: Bearer ***");
+  assert.ok(!out.includes("tok-abcdefghijklmnopqrst"));
+});
+
+test("redactSecrets：短串不会被误伤", () => {
+  // 真实的 Bearer 头有长度下限保护；`Bearer abc` 这种不该被当成凭据。
+  assert.equal(redactSecrets("Bearer abc"), "Bearer abc");
+});
+
+test("redactValue：按值脱敏，与 token 的形状无关", () => {
+  // 这才是用量侧的主防线：userToken 来自未公开接口，格式无从保证，
+  // 形状匹配靠不住，只能按值抹。
+  const opaque = "not-a-jwt-and-not-sk-shaped-9f3a2b";
+  const out = redactValue(`请求失败：${opaque}`, opaque);
+  assert.ok(!out.includes(opaque), `按值脱敏没生效：${out}`);
+});
+
+test("redactValue：未配置或过短时原样返回", () => {
+  // 长度下限 8 是为了避免用户误存个 "abc" 之后，正文里随处可见的子串被全替掉——
+  // 那种「脱敏」会把消息毁得没法读。
+  assert.equal(redactValue("hello world", undefined), "hello world");
+  assert.equal(redactValue("hello world", "abc"), "hello world");
 });

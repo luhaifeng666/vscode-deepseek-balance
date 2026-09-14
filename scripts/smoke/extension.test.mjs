@@ -29,6 +29,11 @@ const TARGET = process.env.SMOKE_TARGET ?? "dist";
 /** 这个假密钥会走完整个激活流程；断言它不出现在日志或状态栏里。 */
 const API_KEY = "sk-smoke-abcdefghijklmnop";
 
+/** 用量侧的第二枚凭据。两个都不许出现在日志/悬停里。 */
+const USAGE_TOKEN = "ut-smoke-abcdefghijklmnop";
+const USAGE_TOKEN_SECRET = "deepseekBalance.usageToken";
+const API_KEY_SECRET = "deepseekBalance.apiKey";
+
 const stub = require("./vscode-stub.cjs");
 
 // 扩展宿主的 `vscode` 由 VS Code 注入，纯 Node 下没有这个模块。
@@ -68,7 +73,7 @@ const state = {
   server: undefined,
   context: undefined,
   ext: undefined,
-  stored: new Map([[`deepseekBalance.apiKey`, API_KEY]]),
+  stored: new Map([[API_KEY_SECRET, API_KEY]]),
   fakeFetch: undefined,
 };
 
@@ -105,37 +110,95 @@ before(async () => {
   state.pkg = JSON.parse(readFileSync(path.join(state.root, "package.json"), "utf8"));
 
   // ---- 本地 mock 接口 ----
+  //
+  // 每条请求都记下来（路径 + 凭据 + 头），因为最有价值的断言恰恰是**两个凭据
+  // 各自发往正确端点、没有串用**：余额带 API Key、用量带 userToken。这个假服务器
+  // 是唯一能同时看见两条链路的地方。
+  state.requests = [];
   state.server = createServer((req, res) => {
-    // 顺带验一件事：密钥确实以 Bearer 头发出去了
-    if (req.url !== "/user/balance" || req.headers.authorization !== `Bearer ${API_KEY}`) {
-      res.writeHead(401, { "content-type": "application/json" });
-      res.end(JSON.stringify({ error: "bad key" }));
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const auth = req.headers.authorization;
+    state.requests.push({
+      path: url.pathname,
+      auth,
+      referer: req.headers.referer,
+      userAgent: req.headers["user-agent"],
+      search: url.search,
+    });
+
+    // 余额：只认 API Key
+    if (url.pathname === "/user/balance") {
+      if (auth !== `Bearer ${API_KEY}`) {
+        res.writeHead(401, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "bad key" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          is_available: true,
+          balance_infos: [
+            {
+              currency: "CNY",
+              total_balance: "34.53",
+              granted_balance: "0.00",
+              topped_up_balance: "34.53",
+            },
+            {
+              currency: "USD",
+              total_balance: "20.00",
+              granted_balance: "0.00",
+              topped_up_balance: "20.00",
+            },
+          ],
+        }),
+      );
       return;
     }
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(
-      JSON.stringify({
-        is_available: true,
-        balance_infos: [
-          {
-            currency: "CNY",
-            total_balance: "34.53",
-            granted_balance: "0.00",
-            topped_up_balance: "34.53",
-          },
-          {
-            currency: "USD",
-            total_balance: "20.00",
-            granted_balance: "0.00",
-            topped_up_balance: "20.00",
-          },
-        ],
-      }),
-    );
+
+    // 用量：只认 userToken。凭据不对时按真实接口的行为返回 **HTTP 200 + 40002**
+    // ——只看状态码的实现会误判成功，这条路径必须在冒烟里也走一遍。
+    if (url.pathname.startsWith("/api/v0/usage/by_api_key/")) {
+      const token = state.stored.get("deepseekBalance.usageToken");
+      if (token === undefined || auth !== `Bearer ${token}`) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ code: 40002, msg: "Missing Token", data: null }));
+        return;
+      }
+      const kind = url.pathname.endsWith("/cost") ? "cost" : "amount";
+      const bizData =
+        kind === "cost"
+          ? [{ currency: "CNY", series: [{ buckets: [{ cost: "1.25" }] }] }]
+          : {
+              series: [
+                {
+                  buckets: [
+                    {
+                      usage: {
+                        REQUEST: 3,
+                        RESPONSE_TOKEN: 40,
+                        PROMPT_CACHE_HIT_TOKEN: 10,
+                        PROMPT_CACHE_MISS_TOKEN: 20,
+                      },
+                    },
+                  ],
+                },
+              ],
+            };
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ code: 0, data: { biz_code: 0, biz_data: bizData } }));
+      return;
+    }
+
+    res.writeHead(404, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "not found" }));
   });
   await new Promise((r) => state.server.listen(0, "127.0.0.1", r));
-  stub.__configStore["deepseekBalance.baseUrl"] =
-    `http://127.0.0.1:${state.server.address().port}`;
+  const origin = `http://127.0.0.1:${state.server.address().port}`;
+  stub.__configStore["deepseekBalance.baseUrl"] = origin;
+  // 用量地址不是配置项，只从环境变量读。resolveUsageBaseUrl 结构上只放行
+  // 回环地址，所以这里能指过去、而恶意配置指不出去。
+  process.env.DEEPSEEK_USAGE_BASE_URL = origin;
 
   // ---- 假 context ----
   state.context = {
@@ -235,6 +298,142 @@ test("配置变更不会抛异常", async () => {
   await settle(200);
 });
 
+// ---- 用量 ----
+
+const usageRequests = () =>
+  state.requests.filter((r) => r.path.startsWith("/api/v0/usage/by_api_key/"));
+const tooltipText = () => String(stub.__created.statusBarItems[0].tooltip?.value ?? "");
+
+test("没配用量 Token 时一个用量请求都不发，悬停如实说「未配置」", async () => {
+  assert.equal(state.stored.has(USAGE_TOKEN_SECRET), false, "前提：此时不该有 Token");
+  assert.deepEqual(usageRequests(), [], "没配 Token 却打了用量接口");
+  assert.match(tooltipText(), /未配置/, "悬停没有说明用量未配置");
+});
+
+test("「设置用量 Token」之后悬停出现用量数字，且两个凭据各发往正确端点", async () => {
+  const before = usageRequests().length;
+
+  // 模拟用户在密码框里真的粘贴了 Token。
+  const original = stub.window.showInputBox;
+  stub.window.showInputBox = async (options) => {
+    stub.__created.inputBox = options;
+    return USAGE_TOKEN;
+  };
+  try {
+    await stub.commands.registered.get("deepseekBalance.setUsageToken")();
+  } finally {
+    stub.window.showInputBox = original;
+  }
+  await settle();
+
+  assert.equal(stub.__created.inputBox?.password, true, "Token 输入框没有设成密码框");
+  assert.equal(state.stored.get(USAGE_TOKEN_SECRET), USAGE_TOKEN, "Token 没进 SecretStorage");
+
+  const fresh = usageRequests().slice(before);
+  assert.ok(fresh.length >= 2, `设置 Token 后没有发起用量查询：${fresh.length} 条`);
+
+  // 这是这个假服务器唯一能验的事：**两个凭据没有串用**。
+  assert.deepEqual(
+    [...new Set(fresh.map((r) => r.auth))],
+    [`Bearer ${USAGE_TOKEN}`],
+    "用量请求带的不是 userToken",
+  );
+  const balanceAuths = [
+    ...new Set(state.requests.filter((r) => r.path === "/user/balance").map((r) => r.auth)),
+  ];
+  assert.deepEqual(balanceAuths, [`Bearer ${API_KEY}`], "余额请求带的不是 API Key");
+
+  const text = tooltipText();
+  assert.match(text, /用量/, `悬停里没有用量段：${text}`);
+  assert.match(text, /CNY 1\.25/, `悬停里没有消耗金额：${text}`);
+  assert.match(text, /请求 3 次/, `悬停里没有请求次数：${text}`);
+  assert.match(text, /缓存命中 10/, `悬停里没有缓存命中：${text}`);
+
+  // 用量接手渲染之后，状态栏项不能被重建（两个生产者各调一次 update 就会打架）
+  assert.equal(stub.__created.statusBarItems.length, 1, "状态栏项被重建了");
+});
+
+test("用量请求带上了 referer / user-agent（Electron 上可能被吞，先钉住行为）", async () => {
+  // 本机 Node 会原样转发这两个头，但 VS Code 1.95 是 Electron 32 → Node 20，
+  // undici 对 forbidden header 的处理跨版本改过。这里失败就先知道，别等上线。
+  const sample = usageRequests().at(-1);
+  assert.ok(sample !== undefined, "没有可检查的用量请求");
+  assert.equal(sample.referer, "https://platform.deepseek.com/usage");
+  assert.match(String(sample.userAgent), /Mozilla\/5\.0/);
+  assert.match(sample.search, /[?&]tz=0(&|$)/, `窗口参数里没有 tz=0：${sample.search}`);
+});
+
+test("执行时间范围命令：写进 Global，并触发用量重查与重渲染", async () => {
+  const before = usageRequests().length;
+
+  await stub.commands.registered.get("deepseekBalance.usageRangeMonth")();
+  await settle();
+
+  assert.equal(
+    stub.__configScopes.global["deepseekBalance.usageRange"],
+    "month",
+    "范围没写进全局设置",
+  );
+  assert.equal(
+    stub.__configScopes.workspace["deepseekBalance.usageRange"],
+    undefined,
+    "范围被写进了工作区层，而不是全局",
+  );
+
+  const fresh = usageRequests().slice(before);
+  assert.ok(fresh.length >= 2, "切范围没有触发用量重查");
+
+  const text = tooltipText();
+  assert.match(text, /\*\*用量 · 本月\*\*/, `悬停标题没跟着切：${text}`);
+  // 当前范围是粗体、不做成链接；另外两个才是链接。
+  assert.ok(
+    !text.includes("command:deepseekBalance.usageRangeMonth"),
+    "当前范围不该是可点链接（它已经是当前值了）",
+  );
+  assert.ok(
+    text.includes("command:deepseekBalance.usageRangeToday"),
+    "其它范围应当是命令链接",
+  );
+});
+
+test("工作区层盖住 Global 时如实提示，而不是静默失败", async () => {
+  // 这是这套方案自己带来的失败模式：写 Global，工作区有同名设置就被盖住，
+  // 表现是「点了链接数字纹丝不动」且毫无报错。
+  stub.__configScopes.workspace["deepseekBalance.usageRange"] = "week";
+  const before = stub.__created.messages.length;
+
+  await stub.commands.registered.get("deepseekBalance.usageRangeToday")();
+  await settle();
+
+  // 写还是写了 Global，只是没生效
+  assert.equal(stub.__configScopes.global["deepseekBalance.usageRange"], "today");
+
+  const fresh = stub.__created.messages.slice(before).map(([, message]) => String(message));
+  assert.ok(
+    fresh.some((m) => m.includes("工作区") && m.includes("覆盖")),
+    `被工作区设置覆盖时没有提示：${JSON.stringify(fresh)}`,
+  );
+
+  delete stub.__configScopes.workspace["deepseekBalance.usageRange"];
+  await settle(200);
+});
+
+test("「清除用量 Token」回到未配置态，余额不受影响", async () => {
+  const before = usageRequests().length;
+  await stub.commands.registered.get("deepseekBalance.clearUsageToken")();
+  await settle();
+
+  assert.equal(state.stored.has(USAGE_TOKEN_SECRET), false, "Token 仍在 SecretStorage 里");
+  const text = tooltipText();
+  assert.match(text, /未配置/, `清除 Token 后悬停没回到未配置：${text}`);
+  assert.match(text, /CNY 34\.53/, "清除用量 Token 把余额也弄没了");
+
+  // 未配置就不该再轮询（gate）。
+  stub.__configListeners.emit("change", { affectsConfiguration: () => true });
+  await settle();
+  assert.equal(usageRequests().length, before, "未配 Token 时仍在打用量接口");
+});
+
 test("「清除 API Key」回到未配置态，且密钥真的从 SecretStorage 删掉了", async () => {
   await stub.commands.registered.get("deepseekBalance.clearApiKey")();
   await settle();
@@ -244,20 +443,59 @@ test("「清除 API Key」回到未配置态，且密钥真的从 SecretStorage 
   assert.match(text, /DeepSeek/, `清除密钥后状态栏文案不符：${text}`);
 });
 
-test("日志与状态栏里都没有出现过密钥", () => {
+test("没有 API Key 时，用量轮询彻底停掉（哪怕 Token 还在）", async () => {
+  // 隐私边界：no-key 态下悬停根本不渲染用量段，此时还去轮询就是一个从没配过
+  // API Key 的用户每隔几分钟被我们打一次 platform.deepseek.com，换回一份永不
+  // 展示的数据。整个设计里唯一「用户看不到收益却打了第三方主机」的路径。
+  state.stored.set(USAGE_TOKEN_SECRET, USAGE_TOKEN);
+  const before = state.requests.length;
+
+  // 把能触发刷新的口子都捅一遍：配置变更 + 手动刷新 + 窗口聚焦。
+  stub.__configListeners.emit("change", { affectsConfiguration: () => true });
+  await stub.commands.registered.get("deepseekBalance.refresh")();
+  stub.window._windowState?.({ focused: true });
+  await settle();
+
+  assert.deepEqual(
+    state.requests.slice(before).filter((r) => r.path.startsWith("/api/v0/")),
+    [],
+    "没有 API Key 却打了用量接口",
+  );
+
+  state.stored.delete(USAGE_TOKEN_SECRET);
+});
+
+test("日志与状态栏里都没有出现过任何一枚凭据", () => {
   const logs = stub.__created.outputChannels.flatMap((c) => c.lines.map(([, m]) => String(m)));
   assert.ok(logs.length > 0, "输出通道一行日志都没有");
-  const leaked = logs.filter((l) => l.includes(API_KEY));
-  assert.deepEqual(leaked, [], "日志里泄漏了密钥");
+
+  // 两枚都要查。API Key 有 `sk-` 前缀，脱敏 pattern 天然盯着它；控制台 Token
+  // 不是那个形状——它能被兜住靠的是扩过的 JWT / Bearer 规则，所以必须单独断言，
+  // 否则「没泄漏」可能只是因为压根没走到脱敏函数。
+  for (const [label, secret] of [
+    ["API Key", API_KEY],
+    ["用量 Token", USAGE_TOKEN],
+  ]) {
+    assert.deepEqual(
+      logs.filter((l) => l.includes(secret)),
+      [],
+      `日志里泄漏了${label}`,
+    );
+  }
 
   const surfaces = stub.__created.statusBarItems.map((i) =>
     JSON.stringify([i.text, i.tooltip?.value, i.accessibilityInformation]),
   );
-  assert.deepEqual(
-    surfaces.filter((s) => s.includes(API_KEY)),
-    [],
-    "状态栏/tooltip 里泄漏了密钥",
-  );
+  for (const [label, secret] of [
+    ["API Key", API_KEY],
+    ["用量 Token", USAGE_TOKEN],
+  ]) {
+    assert.deepEqual(
+      surfaces.filter((s) => s.includes(secret)),
+      [],
+      `状态栏/tooltip 里泄漏了${label}`,
+    );
+  }
 });
 
 test("所有 subscription 可释放，deactivate() 不抛异常", () => {

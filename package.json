@@ -2,7 +2,7 @@
   "name": "vscode-deepseek-balance",
   "displayName": "DeepSeek 余额",
   "description": "在状态栏实时显示 DeepSeek 账户余额，支持多币种、低余额提醒与自动刷新。",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "luhaifeng666",
   "license": "MIT",
   "author": {
@@ -62,6 +62,31 @@
         "command": "deepseekBalance.openSettings",
         "title": "打开余额设置",
         "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.setUsageToken",
+        "title": "设置用量 Token",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.clearUsageToken",
+        "title": "清除用量 Token",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.usageRangeToday",
+        "title": "用量范围：今日",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.usageRangeWeek",
+        "title": "用量范围：近 7 天",
+        "category": "DeepSeek"
+      },
+      {
+        "command": "deepseekBalance.usageRangeMonth",
+        "title": "用量范围：本月",
+        "category": "DeepSeek"
       }
     ],
     "configuration": {
@@ -117,6 +142,22 @@
           "default": "right",
           "scope": "window",
           "markdownDescription": "状态栏余额显示的位置。"
+        },
+        "deepseekBalance.usageRange": {
+          "type": "string",
+          "enum": [
+            "today",
+            "week",
+            "month"
+          ],
+          "enumDescriptions": [
+            "今日（本地日界，最准）",
+            "近 7 天（按 UTC 日切分）",
+            "本月（按 UTC 日切分）"
+          ],
+          "default": "today",
+          "scope": "window",
+          "markdownDescription": "悬停提示里用量数据的时间范围。近 7 天与本月按 **UTC 日**切分（接口只接受 UTC 对齐的长窗口），与本地日界最多差 8 小时；今日是本地日界。"
         }
       }
     }

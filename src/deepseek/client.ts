@@ -11,11 +11,36 @@ export const DEFAULT_BASE_URL = "https://api.deepseek.com";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-/** 兜底脱敏：任何要离开进程的文本都过一遍，防止将来有人不小心把密钥拼进消息。 */
-const SECRET_PATTERN = /sk-[A-Za-z0-9_-]{8,}/g;
-
+/**
+ * 兜底脱敏：任何要离开进程的文本都过一遍，防止将来有人不小心把密钥拼进消息。
+ *
+ * 原本只认 `sk-` 前缀。但用量接口用的控制台 userToken **不是**这个形状——
+ * 它是浏览器 localStorage 里的会话串（可能是不透明串，也可能是 JWT）。
+ * 所以再补两类通用形状。三条分开替是因为替换文本不同，混在一个正则里
+ * 只会把 Bearer 头也印成 `sk-***`，反而看不出被抹了什么。
+ *
+ * ⚠️ 这是**兜底**，不是主防线。形状匹配依赖「token 长得像什么」，这不可靠；
+ * 用量侧以 `redactValue` 的按值脱敏为主——那个不依赖格式。
+ */
 export function redactSecrets(text: string): string {
-  return text.replace(SECRET_PATTERN, "sk-***");
+  return text
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-***")
+    .replace(/eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}/g, "<JWT>")
+    .replace(/Bearer\s+\S{12,}/gi, "Bearer ***");
+}
+
+/**
+ * 按值脱敏：把已知的密钥字面量整段替换掉。
+ *
+ * 比形状匹配可靠得多——它不关心 token 是什么格式。用量的 userToken 来自未公开
+ * 接口，格式无从保证，所以那边以此为主防线。
+ *
+ * 长度下限 8 是为了避免短串（比如用户误存了个 "abc"）把正文里随处可见的
+ * 子串全替掉，那种「脱敏」会把消息毁得没法读。
+ */
+export function redactValue(text: string, secret: string | undefined): string {
+  if (secret === undefined || secret.length < 8) return text;
+  return text.split(secret).join("***");
 }
 
 export function classifyHttpStatus(
