@@ -175,7 +175,8 @@ function snapshotSection(snapshot: BalanceSnapshot): string[] {
       ? "$(check) 账户状态：可用"
       : "$(circle-slash) 账户状态：不可用于 API 调用",
     `$(history) 上次更新：${formatTime(snapshot.fetchedAt)}`,
-    `$(server) 接口地址：${snapshot.endpoint}`,
+    // 接口地址**不放悬停里**：它是排查代理配错的诊断信息，日常悬停不需要，
+    // 放在那里只是噪音。改到「查看余额详情」的 QuickPick 里，诊断能力不丢。
   ];
 }
 

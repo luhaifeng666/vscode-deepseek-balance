@@ -38,7 +38,7 @@ export interface BalanceSnapshot {
   /** 对应接口的 is_available。为 false 表示资金仍在但不可用于 API 调用。 */
   isAvailable: boolean;
   fetchedAt: number;
-  /** 生效的接口地址，展示在 tooltip 里，便于排查代理配错。 */
+  /** 生效的接口地址，展示在「查看余额详情」里，便于排查代理配错。 */
   endpoint: string;
 }
 

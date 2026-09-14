@@ -97,8 +97,9 @@ function harness(
 }
 
 function okResponse(url: string): Response {
+  // cost 的 biz_data 是**对象**、数组挂在 data 下；amount 的 series 直接挂。
   const bizData = url.includes("/cost?")
-    ? [{ currency: "CNY", series: [{ buckets: [{ cost: "1.25" }] }] }]
+    ? { bucket: 3600, data: [{ currency: "CNY", series: [{ buckets: [{ cost: "1.25" }] }] }] }
     : {
         series: [
           {

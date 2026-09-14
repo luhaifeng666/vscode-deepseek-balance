@@ -73,7 +73,15 @@ function okEnvelope(bizData: unknown): unknown {
   return { code: 0, msg: "ok", data: { biz_code: 0, biz_msg: "", biz_data: bizData } };
 }
 
-const COST_BIZ = [
+/**
+ * cost 的**条目数组**。
+ *
+ * ⚠️ cost 的 biz_data 是**对象**，这个数组挂在 `data` 下；amount 的 series 则直接
+ * 挂在 biz_data 下。两边不对称是实测形状，别为了「对称好看」把它改平——0.2.0 正是
+ * 把它写成了裸数组，于是单元测试与本地 mock 一起确认了一个错误假设，直到真实接口
+ * 上才炸。
+ */
+const COST_DATA = [
   {
     currency: "CNY",
     series: [
@@ -88,6 +96,14 @@ const COST_BIZ = [
     ],
   },
 ];
+
+const COST_BIZ = {
+  start: 1789344000,
+  end: 1789347600,
+  bucket: 3600,
+  models: ["deepseek-chat"],
+  data: COST_DATA,
+};
 
 const AMOUNT_BIZ = {
   bucket: 3600,
@@ -314,12 +330,31 @@ test("classifyEnvelope：data 为 null / 非对象 / 顶层非对象 → malform
 
 // ── 解析 ────────────────────────────────────────────────────────────
 
-test("parseCostTotals：cost 是字符串，求和后转数字", () => {
+test("parseCostTotals：真实形状 —— biz_data 是对象，数组挂在 data 下", () => {
+  // ⚠️ 0.2.0 把 biz_data 当成了裸数组，于是真实接口上恒报「结构不符合预期（消耗）」，
+  // 而单元测试与本地 mock 全绿——它们和错误实现一起写错了。这条锁住真实形状。
   assert.deepEqual(parseCostTotals(COST_BIZ), { cost: 3.75, currency: "CNY" });
+});
+
+test("parseCostTotals：兼容裸数组与 series 直挂（未公开接口的容错）", () => {
+  // 放宽的只是「数组在哪」，不是「数字算不算数」：三种形态求和的是同一批桶。
+  assert.deepEqual(parseCostTotals(COST_DATA), { cost: 3.75, currency: "CNY" });
+  assert.deepEqual(parseCostTotals({ series: [{ buckets: [{ cost: "1" }] }] }), {
+    cost: 1,
+    currency: "CNY",
+  });
+});
+
+test("parseCostTotals：三种形态都没有 → 结构不符，不当成 0", () => {
+  assert.equal(parseCostTotals({ total: "nope" }), undefined);
+  assert.equal(parseCostTotals({ data: "nope" }), undefined);
+  assert.equal(parseCostTotals({ data: "nope", series: "nope" }), undefined);
 });
 
 test("parseCostTotals：空数组 = 确实零消耗，不是结构错误", () => {
   assert.deepEqual(parseCostTotals([]), { cost: 0, currency: "CNY" });
+  // 真实形状下的空窗口同理：data 是空数组。
+  assert.deepEqual(parseCostTotals({ data: [] }), { cost: 0, currency: "CNY" });
 });
 
 test("parseCostTotals：currency 缺失时回退 CNY", () => {

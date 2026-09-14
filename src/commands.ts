@@ -88,7 +88,10 @@ async function showDetails(controller: RefreshController): Promise<void> {
     title: "DeepSeek 账户余额",
     placeHolder:
       `${snapshot.isAvailable ? "账户可用" : "账户不可用于 API 调用"}` +
-      ` · 上次更新 ${formatTime(snapshot.fetchedAt)}`,
+      ` · 上次更新 ${formatTime(snapshot.fetchedAt)}` +
+      // 接口地址从悬停挪到这里：排查「代理/网关配错」时要看的就是它，而日常
+      // 悬停里那行只是噪音。
+      ` · 接口 ${snapshot.endpoint}`,
   });
 
   switch (picked?.action) {

@@ -17,22 +17,35 @@ import { fetchUsage } from "../deepseek/usage";
 const TOKEN = "tok-integration-CANARY1234567890";
 
 /**
- * 一条 cost 的 biz_data 条目，含一个**复合 model 名**（实测见过
+ * cost 的**条目数组**，含一个**复合 model 名**（实测见过
  * "deepseek-chat & deepseek-reasoner"，所以 model 不能当分类维度），
  * 以及两个 series：合计 1.25 + 0.50 = 1.75。
+ *
+ * ⚠️ cost 的 biz_data 是**对象**，这个数组挂在 `data` 下（amount 的 series 直接挂）。
+ * 0.2.0 把它写成了裸数组，真实接口上就报「结构不符合预期（消耗）」。
  */
-const COST_ENTRY = {
-  currency: "CNY",
-  series: [
-    {
-      model: "deepseek-chat",
-      buckets: [{ time: 1_789_344_000, cost: "1.25" }],
-    },
-    {
-      model: "deepseek-chat & deepseek-reasoner",
-      buckets: [{ time: 1_789_347_600, cost: "0.50" }],
-    },
-  ],
+const COST_DATA = [
+  {
+    currency: "CNY",
+    series: [
+      {
+        model: "deepseek-chat",
+        buckets: [{ time: 1_789_344_000, cost: "1.25" }],
+      },
+      {
+        model: "deepseek-chat & deepseek-reasoner",
+        buckets: [{ time: 1_789_347_600, cost: "0.50" }],
+      },
+    ],
+  },
+];
+
+const COST_BIZ = {
+  start: 1_789_344_000,
+  end: 1_789_347_600,
+  bucket: 3600,
+  models: ["deepseek-chat"],
+  data: COST_DATA,
 };
 
 /** amount 侧刻意把桶**倒序**放：解析器一旦按下标取值就会读到错的数。 */
@@ -72,7 +85,7 @@ const AMOUNT_BIZ = {
 /** 合计：请求 42 次、命中 8000 / 未命中 2000、输出 2345。REQUEST 是次数不是 token。 */
 const okEnvelope = (kind: "amount" | "cost") => ({
   code: 0,
-  data: { biz_code: 0, biz_data: kind === "cost" ? [COST_ENTRY] : AMOUNT_BIZ },
+  data: { biz_code: 0, biz_data: kind === "cost" ? COST_BIZ : AMOUNT_BIZ },
 });
 
 let server: Server;
@@ -310,7 +323,7 @@ function handleUsage(rawUrl: string, res: ServerResponse): void {
   switch (usageMode) {
     case "ok":
       return envelope(200, okEnvelope(kind));
-    // 两个 biz_data 条目币种不同 → 无法归到单一币种，必须判结构异常。
+    // 两个 data 条目币种不同 → 无法归到单一币种，必须判结构异常。
     case "conflict-currency":
       return envelope(200, {
         code: 0,
@@ -318,7 +331,7 @@ function handleUsage(rawUrl: string, res: ServerResponse): void {
           biz_code: 0,
           biz_data:
             kind === "cost"
-              ? [COST_ENTRY, { currency: "USD", series: [] }]
+              ? { ...COST_BIZ, data: [COST_DATA[0], { currency: "USD", series: [] }] }
               : AMOUNT_BIZ,
         },
       });
@@ -341,14 +354,17 @@ function handleUsage(rawUrl: string, res: ServerResponse): void {
           biz_code: 0,
           biz_data:
             kind === "cost"
-              ? [
-                  {
-                    currency: "CNY",
-                    series: [
-                      { model: "deepseek-chat", buckets: [{ time: 1, cost: "nope" }] },
-                    ],
-                  },
-                ]
+              ? {
+                  ...COST_BIZ,
+                  data: [
+                    {
+                      currency: "CNY",
+                      series: [
+                        { model: "deepseek-chat", buckets: [{ time: 1, cost: "nope" }] },
+                      ],
+                    },
+                  ],
+                }
               : AMOUNT_BIZ,
         },
       });

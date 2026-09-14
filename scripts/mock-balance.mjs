@@ -72,8 +72,13 @@ const MODES = {
 // 「只看 HTTP 状态码就会误判成功」这条路径——真实接口的鉴权失败就是 HTTP 200 +
 // 信封里的 40002/40003。
 
-/** 一条 cost 的 biz_data：刻意给两个 series、并让第二个排在前面的桶更小。 */
-const COST_BIZ = [
+/**
+ * cost 的**条目数组**。
+ *
+ * 刻意给两个 series、并让第二个排在前面的桶更小（0.50 排在 1.25 前面）——
+ * 解析器若按下标取而不是求和，这里就会露馅。
+ */
+const COST_DATA = [
   {
     currency: "CNY",
     series: [
@@ -86,6 +91,21 @@ const COST_BIZ = [
     ],
   },
 ];
+
+/**
+ * ⚠️ cost 的 biz_data 是**对象**，数组挂在 `data` 下；amount 的 `series` 则直接挂在
+ * biz_data 下。两边不对称，实测就是这样。
+ *
+ * 0.2.0 把这个 mock 写成了裸数组，于是「本地全绿」掩盖了真实接口上的解析失败。
+ * 改回真实形状是有意为之：**mock 照实写，测试才有意义**。
+ */
+const COST_BIZ = {
+  start: 1_789_344_000,
+  end: 1_789_347_600,
+  bucket: 3600,
+  models: ["deepseek-chat", "deepseek-chat & deepseek-reasoner"],
+  data: COST_DATA,
+};
 
 /** 同一条 amount，但把桶的顺序颠倒过来——用来验证解析器只求和、不按下标取。 */
 const AMOUNT_BIZ = {
@@ -121,13 +141,19 @@ const AMOUNT_BIZ = {
   ],
 };
 
-const ZERO_COST = [{ currency: "CNY", series: [{ model: "deepseek-chat", buckets: [] }] }];
+const ZERO_COST = {
+  ...COST_BIZ,
+  data: [{ currency: "CNY", series: [{ model: "deepseek-chat", buckets: [] }] }],
+};
 const ZERO_AMOUNT = { series: [{ model: "deepseek-chat", buckets: [] }] };
 
 /** cost 是字符串类型但内容不是数字：应判「结构异常」，不能静默当成 0。 */
-const DRIFT_COST_NUMBERISH = [
-  { currency: "CNY", series: [{ model: "deepseek-chat", buckets: [{ time: 1, cost: "nope" }] }] },
-];
+const DRIFT_COST_NUMBERISH = {
+  ...COST_BIZ,
+  data: [
+    { currency: "CNY", series: [{ model: "deepseek-chat", buckets: [{ time: 1, cost: "nope" }] }] },
+  ],
+};
 
 const USAGE_MODES = {
   /** 正常：cost 合计 1.75，请求 42 次、命中 8000 / 未命中 2000、输出 2345。 */
@@ -136,7 +162,7 @@ const USAGE_MODES = {
   /** 真的零消耗。与下面的结构漂移必须**看起来不一样**——这正是 toFloat 的坑。 */
   zero: { cost: ZERO_COST, amount: ZERO_AMOUNT },
 
-  /** 结构漂移：biz_data 不是数组。应显示「结构异常」，不是「0」。 */
+  /** 结构漂移：既没有 data[] 也没有 series[]。应显示「结构异常」，不是「0」。 */
   drift: {
     cost: { total: "nope" },
     amount: { series: "nope" },
@@ -145,9 +171,9 @@ const USAGE_MODES = {
   /** cost 字段存在但是 "nope"。参考实现会静默返回 0，本实现必须判结构异常。 */
   "drift-cost": { cost: DRIFT_COST_NUMBERISH, amount: AMOUNT_BIZ },
 
-  /** 两个 biz_data 条目币种不一致 → 无法给单一币种，应判结构异常。 */
+  /** 两个 data 条目币种不一致 → 无法给单一币种，应判结构异常。 */
   "drift-currency": {
-    cost: [COST_BIZ[0], { currency: "USD", series: [] }],
+    cost: { ...COST_BIZ, data: [COST_DATA[0], { currency: "USD", series: [] }] },
     amount: AMOUNT_BIZ,
   },
 

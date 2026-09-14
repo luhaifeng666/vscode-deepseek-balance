@@ -77,7 +77,7 @@ test("正常：信用卡图标、默认前景色", () => {
   assert.equal(vm.command, COMMAND_REFRESH);
 });
 
-test("正常：tooltip 列出全部币种并给出接口地址", () => {
+test("正常：tooltip 列出全部币种与更新时间", () => {
   const vm = renderWith({
     kind: "ok",
     snapshot: snapshot({ infos: [CNY, USD] }),
@@ -85,8 +85,10 @@ test("正常：tooltip 列出全部币种并给出接口地址", () => {
   });
   assert.match(vm.tooltip, /CNY 34\.53（赠送 0\.00 \/ 充值 34\.53）/);
   assert.match(vm.tooltip, /USD 1\.20（赠送 0\.00 \/ 充值 1\.20）/);
-  assert.match(vm.tooltip, /接口地址：https:\/\/api\.deepseek\.com\/user\/balance/);
   assert.match(vm.tooltip, new RegExp(formatTime(1_760_000_000_000)));
+  // 接口地址不进悬停：它是诊断信息，日常悬停不需要。改到了「查看余额详情」里。
+  assert.doesNotMatch(vm.tooltip, /接口地址/);
+  assert.doesNotMatch(vm.tooltip, /api\.deepseek\.com/);
 });
 
 test("正常：状态栏只显示选中币种，即使返回多个", () => {

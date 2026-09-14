@@ -166,9 +166,14 @@ before(async () => {
         return;
       }
       const kind = url.pathname.endsWith("/cost") ? "cost" : "amount";
+      // 照**真实**形状写：cost 的 biz_data 是对象、数组挂在 data 下，amount 的
+      // series 直接挂。写成裸数组曾经让 0.2.0 在真实接口上解析失败，而这里全绿。
       const bizData =
         kind === "cost"
-          ? [{ currency: "CNY", series: [{ buckets: [{ cost: "1.25" }] }] }]
+          ? {
+              bucket: 3600,
+              data: [{ currency: "CNY", series: [{ buckets: [{ cost: "1.25" }] }] }],
+            }
           : {
               series: [
                 {

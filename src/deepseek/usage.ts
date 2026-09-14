@@ -272,24 +272,52 @@ export interface CostTotals {
 }
 
 /**
+ * 定位 cost 的那个「条目数组」。
+ *
+ * ⚠️ 0.2.0 在这里错了，记下来免得再犯：当时把 biz_data 直接当数组，而实测形状是
+ * **对象**，数组挂在 `data` 下：
+ *
+ *   { start, end, bucket, models, data: [{ currency, series: [{ buckets: [...] }] }] }
+ *
+ * amount 的 `series` 却直接挂在 biz_data 下（见 parseAmountTotals），两边不对称。
+ * 当时那份单元测试和本地 mock 都照「数组」写的，于是**测试全绿地确认了一个错误的
+ * 假设**——真正暴露它的只有真实接口。教训不是「多写测试」，是**mock 必须照实
+ * 接口的形状写**，否则测试只是在复述自己的假设。
+ *
+ * 三种形态都接受，因为这是未公开接口，而三者求和的是同一批桶：数组本身、`data[]`、
+ * `series[]`。放宽的只是「数组在哪」，不是「数字算不算数」——每个桶的 cost 依旧
+ * 过 strictNumber，取不到就判 malformed，绝不静默当 0。
+ */
+function costEntries(bizData: unknown): unknown[] | undefined {
+  if (Array.isArray(bizData)) return bizData;
+  const root = asRecord(bizData);
+  if (root === undefined) return undefined;
+  if (Array.isArray(root.data)) return root.data;
+  // series 直接挂在 biz_data 下：与 amount 同形，包一层复用同一段累加逻辑。
+  if (Array.isArray(root.series)) return [root];
+  return undefined;
+}
+
+/**
  * 解析 cost 响应的 biz_data。
  *
- * 形状：**数组**，元素里有 currency 与 series，series[].buckets[].cost 是
- * **字符串**（实测是 "0" 这种），所以要过一次严格取数。
+ * 元素里有 currency 与 series，series[].buckets[].cost 是**字符串**（实测是 "0"
+ * 这种），所以要过一次严格取数。
  *
  * 整个数组都要遍历，**不能只读 [0]**：实测样本里只有一个元素（所有 model 都在
  * 它的 series 里），但「一条一个币种」也是这种形状的自然延伸，只读第一条会静默
  * 漏掉后面的消耗——这正是最难发现的那类错。
  */
 export function parseCostTotals(bizData: unknown): CostTotals | undefined {
-  if (!Array.isArray(bizData)) return undefined;
+  const entries = costEntries(bizData);
+  if (entries === undefined) return undefined;
   // 空数组 = 该窗口确实没有消耗（全新账户就是这样），不是结构问题。
-  if (bizData.length === 0) return { cost: 0, currency: DEFAULT_CURRENCY };
+  if (entries.length === 0) return { cost: 0, currency: DEFAULT_CURRENCY };
 
   let cost = 0;
   let currency: string | undefined;
 
-  for (const item of bizData) {
+  for (const item of entries) {
     const entry = asRecord(item);
     if (entry === undefined) return undefined;
 

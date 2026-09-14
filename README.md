@@ -31,7 +31,6 @@ CNY 34.53（赠送 0.00 / 充值 34.53）
 
 ✓ 账户状态：可用
 🕘 上次更新：2026-09-14 15:32:10
-🖥 接口地址：https://api.deepseek.com/user/balance
 
 用量 · 今日    近 7 天 · 本月
 
@@ -69,7 +68,7 @@ Token 输入 11,000（缓存命中 8,000 / 未命中 2,000） · 输出 2,345
 从 VSIX 安装：
 
 ```sh
-code --install-extension vscode-deepseek-balance-0.2.0.vsix
+code --install-extension vscode-deepseek-balance-0.2.1.vsix
 ```
 
 ## 使用
@@ -125,7 +124,7 @@ DeepSeek **没有公开的用量接口**。用量与消费数据在控制台的�
 
 **走代理没生效？**
 
-VS Code 的 `http.proxy` 设置**不会**作用于本扩展的请求——扩展宿主用的是 Node 的原生 `fetch`，它不读 VS Code 的代理配置。请改 `deepseekBalance.baseUrl`，指向你的代理或网关地址。当前生效的地址可以在悬停提示的最后一行看到。
+VS Code 的 `http.proxy` 设置**不会**作用于本扩展的请求——扩展宿主用的是 Node 的原生 `fetch`，它不读 VS Code 的代理配置。请改 `deepseekBalance.baseUrl`，指向你的代理或网关地址。当前生效的地址可以在「查看余额详情」的顶部看到。
 
 **提示「API Key 无效」？**
 
