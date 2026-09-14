@@ -1,0 +1,21 @@
+src/test/client.test.ts
+  s_fb6c66e037fb19::t_5d948fb6c4cff6 35-62
+  s_fb6c66e037fb19::t_41c46eb3cc2d04 211
+  s_fb6c66e037fb19::t_1183f7fbf1a757 199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "b4e715cca7b4a4458f34c11a9bf15aa32e37173b",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
