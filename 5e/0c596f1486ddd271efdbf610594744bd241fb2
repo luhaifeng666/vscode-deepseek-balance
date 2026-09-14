@@ -1,0 +1,31 @@
+scripts/smoke/extension.test.mjs
+  s_fb6c66e037fb19::t_271975c9dc640d 1-275,277,292-303
+  s_fb6c66e037fb19::t_427ee66092c3a7 276,278-291
+.github/workflows/release.yml
+  s_fb6c66e037fb19::t_ac3cdee5e8ab6e 120-125
+README.md
+  s_fb6c66e037fb19::t_340bee512d6c07 117-118,123
+  s_fb6c66e037fb19::t_b001116e56c4ee 124
+package.json
+  s_fb6c66e037fb19::t_d48234d8e6e82f 130-131
+.vscodeignore
+  s_fb6c66e037fb19::t_78d00c6f65c4f8 10-14
+scripts/smoke/vscode-stub.cjs
+  s_fb6c66e037fb19::t_6bca6ad91d4c65 1-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5e0c596f1486ddd271efdbf610594744bd241fb2",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
