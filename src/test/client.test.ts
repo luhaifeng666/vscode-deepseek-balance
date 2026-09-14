@@ -32,6 +32,34 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+/**
+ * 一个「一直挂着、只在 abort 时 reject」的假响应，用来观察取消行为。
+ *
+ * 那个 hold 定时器是必需的，不是保险起见：`AbortSignal.timeout` 内部的定时器是
+ * **unref** 的（实测：注册后进程 1ms 就退出了，普通 setTimeout 则撑满 300ms），
+ * 它不会自己把事件循环撑住。真 fetch 挂着 socket，所以没这个问题；而这个假 fetch
+ * 不做任何 I/O —— 少了 hold，循环会直接空掉，那个 unref 定时器再没机会触发。
+ * 后果不只是本用例失败：node:test 会以
+ * "Promise resolution is still pending but the event loop has already resolved"
+ * 把它连同同文件后续用例一起 cancel 掉。
+ *
+ * 这在 Node 22 上必现（CI 锁的版本），Node 24 上侥幸不触发 —— 所以别删。
+ */
+function pendingUntilAborted(
+  init: RequestInit | undefined,
+  onSetup?: () => void,
+): Promise<Response> {
+  const signal = init?.signal;
+  return new Promise<Response>((_resolve, reject) => {
+    const hold = setTimeout(() => {}, 60_000); // 顶替真 fetch 持有的那个 socket
+    signal?.addEventListener("abort", () => {
+      clearTimeout(hold);
+      reject(new DOMException("aborted", "AbortError"));
+    });
+    onSetup?.();
+  });
+}
+
 const OK_BODY = {
   is_available: true,
   balance_infos: [
@@ -168,14 +196,7 @@ test("网络异常映射为 network 且不泄漏密钥", async () => {
 
 test("超时映射为 timeout", async () => {
   const result = await withFetch(
-    async (_input, init) => {
-      const signal = init?.signal;
-      return await new Promise<Response>((_resolve, reject) => {
-        signal?.addEventListener("abort", () =>
-          reject(new DOMException("aborted", "AbortError")),
-        );
-      });
-    },
+    async (_input, init) => pendingUntilAborted(init),
     async () => call({ timeoutMs: 20 }),
   );
   assert.equal(result.ok, false);
@@ -187,15 +208,7 @@ test("超时映射为 timeout", async () => {
 test("调用方取消映射为 network（静默取消）", async () => {
   const controller = new AbortController();
   const result = await withFetch(
-    async (_input, init) => {
-      const signal = init?.signal;
-      return await new Promise<Response>((_resolve, reject) => {
-        signal?.addEventListener("abort", () =>
-          reject(new DOMException("aborted", "AbortError")),
-        );
-        controller.abort();
-      });
-    },
+    async (_input, init) => pendingUntilAborted(init, () => controller.abort()),
     async () => call({ signal: controller.signal }),
   );
   assert.equal(result.ok, false);
