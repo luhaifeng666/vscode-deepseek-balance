@@ -1,0 +1,20 @@
+.github/workflows/release.yml
+  s_fb6c66e037fb19::t_981998e0908307 2-125
+  s_fb6c66e037fb19::t_792f05bca4684a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "c80383fddee935a25f501ad68671ea20a3eedab7",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
