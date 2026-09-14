@@ -1,0 +1,934 @@
+<title>OIDC 上架配置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* ---- 亮色（默认）---- */
+  :root {
+    --ground: #F5F7FA;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0F6;
+    --ink: #12161F;
+    --ink-2: #596273;
+    --ink-3: #878F9E;
+    --line: #E0E5EF;
+    --line-strong: #C7CFDF;
+    --accent: #2F4FE8;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E7EBFD;
+    --ok: #0A6E51;
+    --ok-soft: #DCF2E8;
+    --warn: #87500A;
+    --warn-soft: #FBEFD8;
+    --code-bg: #11151D;
+    --code-ink: #DCE2ED;
+    --code-dim: #7E8899;
+    --code-line: #262E3C;
+    --shadow: 0 1px 2px rgba(18, 22, 31, .05), 0 10px 28px -14px rgba(18, 22, 31, .18);
+    --radius: 10px;
+  }
+
+  /* ---- 暗色：系统偏好 ---- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0C0F15;
+      --surface: #141922;
+      --surface-2: #1A202B;
+      --ink: #E6EAF2;
+      --ink-2: #98A2B4;
+      --ink-3: #6C7585;
+      --line: #232A36;
+      --line-strong: #333C4C;
+      --accent: #8095FF;
+      --accent-ink: #0C0F15;
+      --accent-soft: #1A2242;
+      --ok: #48D6A6;
+      --ok-soft: #10301F;
+      --warn: #E3AC4E;
+      --warn-soft: #31250E;
+      --code-bg: #080B10;
+      --code-ink: #DCE2ED;
+      --code-dim: #6E7787;
+      --code-line: #212836;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 28px -14px rgba(0, 0, 0, .7);
+    }
+  }
+
+  /* ---- 暗色：显式切换 ---- */
+  :root[data-theme="dark"] {
+    --ground: #0C0F15;
+    --surface: #141922;
+    --surface-2: #1A202B;
+    --ink: #E6EAF2;
+    --ink-2: #98A2B4;
+    --ink-3: #6C7585;
+    --line: #232A36;
+    --line-strong: #333C4C;
+    --accent: #8095FF;
+    --accent-ink: #0C0F15;
+    --accent-soft: #1A2242;
+    --ok: #48D6A6;
+    --ok-soft: #10301F;
+    --warn: #E3AC4E;
+    --warn-soft: #31250E;
+    --code-bg: #080B10;
+    --code-ink: #DCE2ED;
+    --code-dim: #6E7787;
+    --code-line: #212836;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 10px 28px -14px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 0 96px;
+    padding-inline: 20px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 900px; margin-inline: auto; }
+
+  /* ---- 页头 ---- */
+  header {
+    padding-block: 56px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(28px, 5.4vw, 40px);
+    font-weight: 700;
+    letter-spacing: -.022em;
+    line-height: 1.12;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--ink-2);
+    font-size: 15.5px;
+  }
+
+  /* ---- 进度 ---- */
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    min-width: 60px;
+    background: var(--surface-2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width .25s ease;
+  }
+
+  .progress-count {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ---- 说明块 ---- */
+  .note {
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    color: var(--ink-2);
+    font-size: 14.5px;
+  }
+
+  .note strong { color: var(--ink); font-weight: 600; }
+  .note p { margin: 0; }
+  .note p + p { margin-top: 10px; }
+
+  /* ---- 阶段 ---- */
+  .phase {
+    margin-top: 52px;
+    scroll-margin-top: 84px;
+  }
+
+  .phase-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .phase-num {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--accent);
+  }
+
+  .phase-head h2 {
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.012em;
+    margin: 0;
+    flex: 1;
+    min-width: 12ch;
+    text-wrap: balance;
+  }
+
+  .where {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: .02em;
+    padding: 3px 9px;
+    border-radius: 99px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ---- 步骤 ---- */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .step-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 16px 18px;
+    cursor: pointer;
+  }
+
+  .step-label:hover .step-title { color: var(--accent); }
+
+  .step-box {
+    appearance: none;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 1px 0 0;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    position: relative;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  .step-box:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .step-box:checked::after {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 2.5px;
+    width: 5px;
+    height: 10px;
+    border: solid var(--accent-ink);
+    border-width: 0 2px 2px 0;
+    transform: rotate(42deg);
+  }
+
+  .step-box:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 15.5px;
+    line-height: 1.45;
+    transition: color .15s ease;
+  }
+
+  .step-no {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    margin-right: 7px;
+  }
+
+  .step:has(.step-box:checked) {
+    border-color: var(--line);
+    box-shadow: none;
+  }
+
+  .step:has(.step-box:checked) .step-no { color: var(--ok); }
+
+  .step-body {
+    padding: 0 18px 18px 53px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-body > p { margin: 0; color: var(--ink-2); }
+
+  /* ---- 字段表 ---- */
+  .fields {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+
+  .field {
+    display: grid;
+    grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+    gap: 4px 16px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .field + .field { border-top: 1px solid var(--line); }
+
+  .field dt {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    word-break: break-word;
+  }
+
+  .field dd {
+    margin: 0;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .field dd code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 6px;
+  }
+
+  /* ---- 命令块 ---- */
+  .cmd {
+    position: relative;
+    background: var(--code-bg);
+    border: 1px solid var(--code-line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .cmd pre {
+    margin: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--code-ink);
+  }
+
+  .cmd .cmt { color: var(--code-dim); }
+
+  .copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 5px;
+    border: 1px solid var(--code-line);
+    background: #1B212C;
+    color: var(--code-dim);
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease;
+  }
+
+  .copy:hover { color: var(--code-ink); border-color: #3A4353; }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .copy[data-done="1"] { color: #48D6A6; border-color: #48D6A6; }
+
+  /* ---- 坑 ---- */
+  .trap {
+    display: flex;
+    gap: 12px;
+    padding: 12px 15px;
+    background: var(--warn-soft);
+    border: 1px solid color-mix(in srgb, var(--warn) 26%, transparent);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .trap-label {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--warn);
+    padding-top: 2px;
+    flex: none;
+  }
+
+  .trap p { margin: 0; }
+  .trap code, .inline {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    border-radius: 4px;
+    padding: 1px 5px;
+    overflow-wrap: anywhere;
+  }
+
+  /* 正文里的行内代码不该在连字符处断成两行 */
+  .inline {
+    background: var(--surface-2);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* ---- 排错表 ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+
+  th, td { text-align: left; padding: 11px 15px; vertical-align: top; }
+
+  th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  td + td, th + th { border-left: 1px solid var(--line); }
+  tbody tr + tr td { border-top: 1px solid var(--line); }
+  tbody tr:nth-child(even) { background: var(--surface-2); }
+
+  td:first-child {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--warn);
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  .tail { margin-top: 56px; display: flex; flex-direction: column; gap: 18px; }
+
+  h3 {
+    font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .tail p { margin: 0; color: var(--ink-2); max-width: 64ch; }
+
+  @media (max-width: 560px) {
+    header { padding-block: 36px 18px; }
+    .step-body { padding-left: 18px; }
+    .field { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .phase { margin-top: 40px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">vscode-deepseek-balance · 一次性配置</div>
+    <h1>让 GitHub Actions 用身份而非密钥上架</h1>
+    <p class="lede">
+      把 Entra ID 身份、Marketplace publisher 和这个仓库串起来，之后每次
+      <span class="inline">git push --tags</span>
+      就自动发布。总共 11 步，大约 30–40 分钟，全部只需要做一次。
+    </p>
+
+    <div class="progress">
+      <span class="progress-count"><span id="done">0</span> / <span id="total">11</span> 步</span>
+      <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+    </div>
+
+    <div class="note">
+      <p><strong>为什么要折腾这个？</strong> Azure DevOps 的<strong>全局 PAT</strong> 将于 2026-12-01 停用，而 Marketplace 发布必须用「All accessible organizations」的全局 PAT —— 没有组织级替代品。所以 OIDC 不是优化，是唯一能活过那个日期的路。</p>
+      <p><strong>前置条件：</strong>一个 Microsoft Entra ID 租户。免费的 Entra 层就够，<strong>不需要 Azure 订阅</strong>。如果你从没进过 Azure，去 <a href="https://portal.azure.com">portal.azure.com</a> 注册一个免费账号，它会顺带建好一个默认目录。</p>
+    </div>
+  </header>
+
+  <!-- ================= 阶段 1 ================= -->
+  <section class="phase" id="p1">
+    <div class="phase-head">
+      <span class="phase-num">阶段 01</span>
+      <h2>注册 Publisher</h2>
+      <span class="where">Marketplace</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s1">
+        <label class="step-label" for="s1"><span class="step-title"><span class="step-no">1</span>建一个 publisher，ID 必须叫 <code>luhaifeng666</code></span></label>
+        <div class="step-body">
+          <p>打开 <a href="https://marketplace.visualstudio.com/manage">marketplace.visualstudio.com/manage</a>，用你打算长期用来发布的微软账号登录，点 <strong>Create publisher</strong>。</p>
+          <dl class="fields">
+            <div class="field"><dt>ID</dt><dd><code>luhaifeng666</code></dd></div>
+            <div class="field"><dt>Name</dt><dd>随便填，只影响上架页显示的名字</dd></div>
+          </dl>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>ID <strong>创建后不可更改</strong>，且必须与 <code>package.json</code> 里的 <code>"publisher"</code> <strong>逐字符大小写一致</strong>。如果这个名字被占用了，得回头改仓库里的三处：<code>package.json</code> 的 <code>publisher</code>、README 里的链接、以及 workflow 注释里的 <code>repo:</code> 串。</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 2 ================= -->
+  <section class="phase" id="p2">
+    <div class="phase-head">
+      <span class="phase-num">阶段 02</span>
+      <h2>建 Entra 应用注册</h2>
+      <span class="where">Azure 门户</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s2">
+        <label class="step-label" for="s2"><span class="step-title"><span class="step-no">2</span>注册一个单租户应用，记下两个 ID</span></label>
+        <div class="step-body">
+          <p>在 <a href="https://portal.azure.com">portal.azure.com</a> 顶部搜索 <strong>Microsoft Entra ID</strong> → 左侧 <strong>应用注册</strong> → <strong>新注册</strong>。</p>
+          <dl class="fields">
+            <div class="field"><dt>名称</dt><dd><code>vscode-marketplace-publish</code></dd></div>
+            <div class="field"><dt>支持的帐户类型</dt><dd>仅此组织目录中的帐户（单租户）</dd></div>
+            <div class="field"><dt>重定向 URI</dt><dd>留空 — 这个身份只做机器认证，没有人会登录它</dd></div>
+          </dl>
+          <p>注册完成后停在<strong>概述</strong>页，把这两个值抄下来 —— 后面每一步都要用：</p>
+          <dl class="fields">
+            <div class="field"><dt>应用程序(客户端) ID</dt><dd>→ 待会填成 secret <code>AZURE_CLIENT_ID</code></dd></div>
+            <div class="field"><dt>目录(租户) ID</dt><dd>→ 待会填成 secret <code>AZURE_TENANT_ID</code></dd></div>
+          </dl>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>是<strong>应用程序 ID</strong>，不是「对象 ID」。这两个都是 GUID、长得一样、就在同一页上，抄错了要到阶段 6 才会报错。</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 3 ================= -->
+  <section class="phase" id="p3">
+    <div class="phase-head">
+      <span class="phase-num">阶段 03</span>
+      <h2>建立信任关系</h2>
+      <span class="where">Azure 门户</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s3">
+        <label class="step-label" for="s3"><span class="step-title"><span class="step-no">3</span>加一条 Federated Credential，信任这个仓库的 <code>release</code> 环境</span></label>
+        <div class="step-body">
+          <p>在刚建的应用注册里：<strong>证书和密码</strong> → <strong>联合凭据</strong> → <strong>添加凭据</strong> → 方案选 <strong>GitHub Actions 部署 Azure 资源</strong>。</p>
+          <dl class="fields">
+            <div class="field"><dt>组织 ID</dt><dd><code>9375823</code></dd></div>
+            <div class="field"><dt>存储库 ID</dt><dd><code>1369352399</code></dd></div>
+            <div class="field"><dt>实体类型</dt><dd><strong>环境</strong>（不是分支，也不是标记）</dd></div>
+            <div class="field"><dt>环境名称</dt><dd><code>release</code></dd></div>
+            <div class="field"><dt>名称</dt><dd><code>github-release</code></dd></div>
+          </dl>
+          <p>这两个是 <strong>GitHub 的数字 ID</strong>，不是用户名和仓库名 —— 门户只要数字。随时可以用这条命令复核：</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>gh api repos/luhaifeng666/vscode-deepseek-balance/actions/oidc/customization/sub</pre>
+          </div>
+          <p>Issuer 和 Audience 会自动填好，不用动：</p>
+          <dl class="fields">
+            <div class="field"><dt>Issuer</dt><dd><code>https://token.actions.githubusercontent.com</code></dd></div>
+            <div class="field"><dt>Audience</dt><dd><code>api://AzureADTokenExchange</code></dd></div>
+          </dl>
+          <p>保存前确认预览里的 <strong>Subject</strong> 正好是这一串 —— 这就是双方约定的暗号，一个字符都不能差：</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>repo:luhaifeng666@9375823/vscode-deepseek-balance@1369352399:environment:release</pre>
+          </div>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>那两段 <code>@9375823</code> / <code>@1369352399</code> <strong>不是可选的装饰</strong>。GitHub 从 2026-07-15 起对新仓库改用<strong>不可变 sub 格式</strong>（<code>repo:OWNER@OWNER_ID/REPO@REPO_ID:...</code>），把数字 ID 焊进 subject 里，这样仓库改名或被转让都不会让旧的信任策略意外命中新仓库。本仓库建于 2026-09-14，默认就是新格式 —— 写成不带 ID 的老格式，换 token 会直接失败。</p>
+            <p style="margin-top:8px">用<strong>环境</strong>而不是分支或 tag，则是因为环境名是固定字符串，不需要赌通配符能不能匹配。</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 4 ================= -->
+  <section class="phase" id="p4">
+    <div class="phase-head">
+      <span class="phase-num">阶段 04</span>
+      <h2>取身份的 Resource ID</h2>
+      <span class="where">本地终端</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s4">
+        <label class="step-label" for="s4"><span class="step-title"><span class="step-no">4</span>用 GitHub Actions 借 OIDC 查身份</span></label>
+        <div class="step-body">
+          <p>要拿到 Resource ID，得先以「这个身份的视角」问一句「我是谁」。传统做法是临时建一个 client secret 在本机 <code>az login</code> —— <strong>别这么做</strong>，那既要在本机装 Azure CLI，又要凭空造一个长期凭据。</p>
+          <p>改成在 GitHub runner 上查：<code>az</code> 预装好了，身份由 <code>azure/login</code> 通过 OIDC 当场换来，一条密码都不经手。临时加一个 <code>.github/workflows/whoami.yml</code>：</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>name: 取 resource ID
+on:
+  workflow_dispatch:
+jobs:
+  whoami:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write          <span class="cmt"># 换 OIDC token 需要</span>
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - run: |
+          az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798</pre>
+          </div>
+          <p>推上去 → Actions → 手动 Run。这一步<strong>顺带验证了阶段 03 那条 federated credential 配对</strong> —— 走的 OIDC 路径和正式发布完全一样，subject 写错了现在就会 401。</p>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>日志里如果出现 <code>***\efc93ca0-....-....</code> 这种带星号的 displayName，<strong>不是出错</strong>。星号是 GitHub 在打码 —— 你的 client ID 或 tenant ID 以字面值出现在输出里，它就会替换成 <code>***</code>。而这段 GUID 本身是 Azure DevOps 给服务主体自动生成的标识，<strong>不</strong>会沿用 Entra 里的友好名。身份对不对看的是「<code>az rest</code> 通没通」，不是看这行字。</p>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s5">
+        <label class="step-label" for="s5"><span class="step-title"><span class="step-no">5</span>从日志里读出 Resource ID</span></label>
+        <div class="step-body">
+          <p>返回的 JSON 里那个 <code>"id"</code> 字段就是 <strong>Resource ID</strong> —— 一串 GUID，跟 client ID / 对象 ID <strong>都不一样</strong>。本仓库的值是 <code>eb71e213-0696-62f7-a729-cf533789acf9</code>。</p>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p><code>499b84ac-1321-427f-aa17-267ca6975798</code> 是 <strong>Azure DevOps 这个资源本身</strong>的固定 GUID，不是你的任何 ID。别改它。</p>
+            <p style="margin-top:8px">如果 <code>az rest</code> 返回 401/403，说明 federated credential 没配对上 —— 最常见的原因是 subject 少写了数字 ID（见阶段 03）。</p>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s6">
+        <label class="step-label" for="s6"><span class="step-title"><span class="step-no">6</span>把 whoami workflow 删掉</span></label>
+        <div class="step-body">
+          <p>它的使命已经完成了，而且它每次都要求 <code>id-token: write</code>。留着就是一条没人看的多余激活路径。</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>git rm .github/workflows/whoami.yml
+git commit -m "chore: 取到 Resource ID，删掉临时诊断 workflow"</pre>
+          </div>
+          <p>整套流程从头到尾<strong>没有创建过任何长期凭据</strong>，这正是走 OIDC 的意义。</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 5 ================= -->
+  <section class="phase" id="p5">
+    <div class="phase-head">
+      <span class="phase-num">阶段 05</span>
+      <h2>把身份加进 Publisher</h2>
+      <span class="where">Marketplace</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s7">
+        <label class="step-label" for="s7"><span class="step-title"><span class="step-no">7</span>用 Resource ID 把身份加成 Contributor</span></label>
+        <div class="step-body">
+          <p>回到 <a href="https://marketplace.visualstudio.com/manage">marketplace.visualstudio.com/manage</a>，进入 <code>luhaifeng666</code> 这个 publisher，找到 <strong>Members</strong>（成员）区域，添加成员。</p>
+          <dl class="fields">
+            <div class="field"><dt>标识</dt><dd>阶段 04 查到的 Resource ID</dd></div>
+            <div class="field"><dt>角色</dt><dd><strong>Contributor</strong></dd></div>
+          </dl>
+          <p>这一步是让 Marketplace 承认「这个身份有权代表我发布扩展」。漏了它，publish 会以 401/403 收场。</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 6 ================= -->
+  <section class="phase" id="p6">
+    <div class="phase-head">
+      <span class="phase-num">阶段 06</span>
+      <h2>配 GitHub</h2>
+      <span class="where">GitHub</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s8">
+        <label class="step-label" for="s8"><span class="step-title"><span class="step-no">8</span>建一个名叫 <code>release</code> 的 Environment</span></label>
+        <div class="step-body">
+          <p>仓库 → <strong>Settings</strong> → <strong>Environments</strong> → <strong>New environment</strong>，名字填 <code>release</code>。</p>
+          <dl class="fields">
+            <div class="field"><dt>名字</dt><dd><code>release</code></dd></div>
+          </dl>
+          <p>workflow 里的 <code>environment: release</code> 就是靠它，让 GitHub 签发的 <code>sub</code> 变成阶段 03 约定的那一串。名字对不上，换 token 就失败。</p>
+          <p>顺便可以给它加一条 <strong>Required reviewers</strong> 保护规则 —— 那样每次发布都要你点一下确认，等于给「误推 tag」上了个保险。</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s9">
+        <label class="step-label" for="s9"><span class="step-title"><span class="step-no">9</span>加两个 repository secret</span></label>
+        <div class="step-body">
+          <p><strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong> → <strong>New repository secret</strong>，加两条：</p>
+          <dl class="fields">
+            <div class="field"><dt>AZURE_CLIENT_ID</dt><dd>阶段 02 的应用程序(客户端) ID</dd></div>
+            <div class="field"><dt>AZURE_TENANT_ID</dt><dd>阶段 02 的目录(租户) ID</dd></div>
+          </dl>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>是 <strong>Secrets</strong> 不是 <strong>Variables</strong>。同一页上两个标签挨着，加错了 workflow 里 <code>secrets.AZURE_CLIENT_ID</code> 会取到空值，报错信息会含糊得多。</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 阶段 7 ================= -->
+  <section class="phase" id="p7">
+    <div class="phase-head">
+      <span class="phase-num">阶段 07</span>
+      <h2>发布</h2>
+      <span class="where">本地终端</span>
+    </div>
+
+    <ol class="steps">
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s10">
+        <label class="step-label" for="s10"><span class="step-title"><span class="step-no">10</span>打 tag 推上去</span></label>
+        <div class="step-body">
+          <p>10 分钟内不要碰仓库里的文件。第一版还没上架过，所以 <code>0.1.0</code> 直接发就行，不用先升版本。</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>git tag v0.1.0
+git push origin v0.1.0</pre>
+          </div>
+          <p>之后每次发布就是三步：改 <code>package.json</code> 的 version、提交、打对应 tag 推上去。tag 和 version 对不上时 workflow 会拦下来。</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <input class="step-box" type="checkbox" id="s11">
+        <label class="step-label" for="s11"><span class="step-title"><span class="step-no">11</span>看 Actions 跑完，确认上架</span></label>
+        <div class="step-body">
+          <p>仓库 → <strong>Actions</strong> 标签页，盯着「发布」这一次跑完。成功后用这条确认：</p>
+          <div class="cmd">
+            <button class="copy" type="button">复制</button>
+            <pre>npx vsce show luhaifeng666.vscode-deepseek-balance</pre>
+          </div>
+          <p>能打印出版本和描述就说明上架成功了。</p>
+          <div class="trap">
+            <span class="trap-label">坑</span>
+            <p>发布成功但上架页打开是 <strong>404</strong>，先别慌 —— CDN 传播要几分钟，这不是失败。以 <code>vsce show</code> 的输出为准。</p>
+          </div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 排错 ================= -->
+  <section class="tail">
+    <h3>卡住了？按报错对号入座</h3>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>报错</th><th>真正的原因</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Can not acquire a Microsoft Entra ID access token</td>
+            <td>换 token 那步挂了。八成是 federated credential 的 subject 对不上：确认它带着 <code>@9375823</code> 和 <code>@1369352399</code> 这两个数字 ID，且 GitHub Environment 确实叫 <code>release</code>。subject 不匹配时错误信息不会告诉你差在哪。</td>
+          </tr>
+          <tr>
+            <td>401 / 403 during publish</td>
+            <td>身份没被加进 publisher 成员，或者角色不是 <strong>Contributor</strong>；也可能阶段 05 填的是 Entra 对象 ID，而不是阶段 04 查出来的 Resource ID。</td>
+          </tr>
+          <tr>
+            <td>AADSTS7000215: Invalid client secret</td>
+            <td>阶段 04 复制的是「密码 ID」而不是「值」，或者那个密码已经过期/删掉了。重建一个重来。</td>
+          </tr>
+          <tr>
+            <td>az rest 返回 401 / 403</td>
+            <td>当前登录的不是那个 service principal。跑 <code>az account show</code> 看一眼 —— 用自己账号查出来的 profile ID 填进去不报错，但发布会一直 403。</td>
+          </tr>
+          <tr>
+            <td>tag vX 与 package.json 里的 Y 不一致</td>
+            <td>这是 workflow 的保护，不是故障。把版本号同步好再重新打 tag。</td>
+          </tr>
+          <tr>
+            <td>上架页 404</td>
+            <td>CDN 传播，等几分钟。以 <code>vsce show</code> 为准。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tail">
+    <h3>如果你今天就想要一个已上架的版本</h3>
+    <p>
+      上面这套是可以等的。想先用旧办法把 0.1.0 发出去，就去 Azure DevOps 建一个 PAT（Organization 选 <strong>All accessible organizations</strong>，scope 勾 <strong>Marketplace → Manage</strong>），然后本地
+      <span class="inline">npx vsce publish -p &lt;PAT&gt;</span>。
+      它能用到 2026-12-01 —— 但全局 PAT 在那天会一起失效，所以这条路只适合「先发出去，之后照样得回来把上面走完」。
+    </p>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var KEY = "vscode-deepseek-release-runbook";
+    var boxes = Array.prototype.slice.call(document.querySelectorAll(".step-box"));
+    var done = document.getElementById("done");
+    var total = document.getElementById("total");
+    var fill = document.getElementById("fill");
+
+    total.textContent = String(boxes.length);
+
+    function readState() {
+      try {
+        return JSON.parse(localStorage.getItem(KEY) || "{}") || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function writeState(state) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) {
+        /* 隐私模式或存储被禁用：勾选仍然可用，只是不跨会话保留 */
+      }
+    }
+
+    var state = readState();
+
+    function paint() {
+      var n = 0;
+      boxes.forEach(function (box) {
+        state[box.id] = box.checked;
+        if (box.checked) n++;
+      });
+      done.textContent = String(n);
+      fill.style.width = boxes.length ? (n / boxes.length) * 100 + "%" : "0%";
+    }
+
+    boxes.forEach(function (box) {
+      if (state[box.id]) box.checked = true;
+      box.addEventListener("change", function () {
+        paint();
+        writeState(state);
+      });
+    });
+
+    paint();
+
+    // 复制按钮
+    Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (btn) {
+      btn.addEventListener("click", function () {
+        var pre = btn.parentNode.querySelector("pre");
+        if (!pre) return;
+        var text = pre.innerText;
+        var flash = function () {
+          btn.textContent = "已复制";
+          btn.setAttribute("data-done", "1");
+          setTimeout(function () {
+            btn.textContent = "复制";
+            btn.removeAttribute("data-done");
+          }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(flash, function () {});
+        } else {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand("copy"); flash(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      });
+    });
+  })();
+</script>

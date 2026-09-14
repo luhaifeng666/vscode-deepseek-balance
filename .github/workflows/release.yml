@@ -25,16 +25,19 @@
 #    末段用 environment 而不是分支/tag —— 固定字符串，不需要通配符，
 #    且能吃到 GitHub Environment 的保护规则。
 #
-# 3. 取该身份的 resource ID（先在应用注册里临时建一个 client secret 用来登录）：
-#      az login --service-principal --username <client-id> \
-#        --password <secret值> --tenant <tenant-id>
+# 3. 取该身份的 resource ID。不要为此建 client secret —— 直接借 GitHub runner
+#    上预装的 az 和已经配好的 OIDC 来查，一条密码都不用经手：
+#      gh workflow run whoami.yml      # 临时加一个登 azure + az rest 的 workflow
+#      gh run view <run-id> --log      # 读 id 字段，用完把 workflow 删掉
+#    查的接口是：
 #      az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
 #        --resource 499b84ac-1321-427f-aa17-267ca6975798
-#    记下返回 JSON 里的 id 字段，然后立刻删掉那个 client secret。
+#    这顺带验证了第 2 步的 federated credential 配对 —— 走的 OIDC 路径完全一样。
 #
 # 4. Marketplace 里把该身份加为 publisher 成员：
 #    https://marketplace.visualstudio.com/manage → Publishers → Members
 #    用上一步的 resource ID 添加，角色选 Contributor。
+#    （本仓库已用 eb71e213-0696-62f7-a729-cf533789acf9 完成这一步。）
 #
 # 5. GitHub 仓库设置：
 #    - Settings → Environments → 新建名为 release 的环境（名字必须一致）
