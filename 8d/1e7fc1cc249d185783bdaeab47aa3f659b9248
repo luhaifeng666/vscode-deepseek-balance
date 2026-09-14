@@ -1,0 +1,51 @@
+scripts/mock-balance.mjs
+  s_fb6c66e037fb19::t_009c0741005a60 165
+  s_fb6c66e037fb19::t_d228dadb45cf54 144-147,151-156
+  s_fb6c66e037fb19::t_d4a77b94509b7a 75-81,95-108
+  s_fb6c66e037fb19::t_f5c09a9dd21204 174,176
+  s_fb6c66e037fb19::t_4d2f0f8fd221c4 109
+src/test/usage.test.ts
+  s_fb6c66e037fb19::t_d179ee63851115 76-84,100-106
+  s_fb6c66e037fb19::t_81aa7d6289690c 333-335,339-353,356-357
+  s_fb6c66e037fb19::t_ad85969905d1bb 107
+src/test/integration.test.ts
+  s_fb6c66e037fb19::t_0c4ea682ccf3d6 88
+  s_fb6c66e037fb19::t_f0d5f61702626a 357-367
+  s_fb6c66e037fb19::t_c793518b67a823 326,334
+  s_fb6c66e037fb19::t_88acaa90d08729 20,23-25,27-48
+src/test/usageController.test.ts
+  s_fb6c66e037fb19::t_91bfd879edb22e 100,102
+src/render.ts
+  s_fb6c66e037fb19::t_205b051500830b 178-179
+src/commands.ts
+  s_fb6c66e037fb19::t_3fcd468c12d551 91-94
+src/deepseek/types.ts
+  s_fb6c66e037fb19::t_6fd0d3105c539b 41
+scripts/smoke/extension.test.mjs
+  s_fb6c66e037fb19::t_9df73a6270ffdd 169-170,173-176
+src/deepseek/usage.ts
+  s_fb6c66e037fb19::t_154894f5288567 295
+  s_fb6c66e037fb19::t_a74ed7d3c84525 275-294,296-300,304-305,312-313,315,320
+  s_fb6c66e037fb19::t_010e4d4f86addb 274
+src/test/render.test.ts
+  s_fb6c66e037fb19::t_aec8a8334bdb61 80,89-91
+README.md
+  s_fb6c66e037fb19::t_21cca9589d470f 127
+  s_fb6c66e037fb19::t_34daaf5d066c5a 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "8d1e7fc1cc249d185783bdaeab47aa3f659b9248",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
