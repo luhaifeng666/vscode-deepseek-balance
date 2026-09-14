@@ -1,0 +1,37 @@
+docs/release-setup.html
+  s_fb6c66e037fb19::t_4cc61e581023b6 819
+  s_fb6c66e037fb19::t_db2e28ed3d1d75 543,576,622,639-696,760,780-781,784,794-795,797,802
+  s_fb6c66e037fb19::t_43127472f2d887 597-621
+  s_fb6c66e037fb19::t_722a1bb5fc38d3 540-542
+  s_fb6c66e037fb19::t_50455c99f359b3 544-546,573-575
+  s_fb6c66e037fb19::t_367ff93d21c9e4 577-579,594-596
+  s_fb6c66e037fb19::t_d2f138fe8ebbff 623-625,636-638
+  s_fb6c66e037fb19::t_318986c2ec8cbd 697-699,757-759
+  s_fb6c66e037fb19::t_b2f4f68b8f4af1 761-763,777-779
+  s_fb6c66e037fb19::t_11758d6df80570 782-783
+  s_fb6c66e037fb19::t_3a94d4a3bf0f5d 785-787,791-793
+  s_fb6c66e037fb19::t_cf05d238d86423 796
+  s_fb6c66e037fb19::t_a57a0d42bd93b4 798-801
+  s_fb6c66e037fb19::t_0122248844459e 803-805,816-818
+  s_fb6c66e037fb19::t_6bb3921ee6858d 820-822
+  s_fb6c66e037fb19::t_90c751561db137 1-4,6-30,32-539,547-572,580-593,626-635,700-756,764-776,788-790,806-815,823-893,895-901,903,905-934
+.github/workflows/release.yml
+  s_fb6c66e037fb19::t_29b2204a05f035 40
+  s_fb6c66e037fb19::t_0dc3d48ea053c1 28-32,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "5b82a4a7f2cbb0038312df70905e6b6937f42184",
+  "prompts": {},
+  "sessions": {
+    "s_fb6c66e037fb19": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "473637c2-b0b2-4817-8580-84ec3b839df0",
+        "model": "deepseek-flash"
+      },
+      "human_author": "luhaifeng666 <youzui@hotmail.com>"
+    }
+  }
+}
